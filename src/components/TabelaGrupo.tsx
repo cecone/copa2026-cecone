@@ -1,4 +1,5 @@
 import { Grupo } from '@/types'
+import Bandeira from './Bandeira'
 
 type Props = {
   grupo: Grupo
@@ -45,7 +46,7 @@ export default function TabelaGrupo({ grupo }: Props) {
               {/* Seleção */}
               <div className="flex items-center gap-2 min-w-0">
                 <span className="text-xs text-white/30 w-3">{index + 1}</span>
-                <span className="text-lg leading-none">{item.selecao.bandeira}</span>
+                <Bandeira codigo={item.selecao.codigo} emoji={item.selecao.bandeira} nome={item.selecao.nome} tamanho="sm" />
                 <span className={`truncate font-medium ${avanca ? 'text-white' : 'text-white/70'}`}>
                   {item.selecao.nome}
                 </span>

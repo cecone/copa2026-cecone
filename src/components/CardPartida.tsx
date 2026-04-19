@@ -1,4 +1,5 @@
 import { Partida } from '@/types'
+import Bandeira from './Bandeira'
 
 type Props = {
   partida: Partida
@@ -35,7 +36,7 @@ export default function CardPartida({ partida }: Props) {
       <div className="flex items-center justify-between gap-2">
         {/* Time da casa */}
         <div className={`flex flex-col items-center gap-1 flex-1 ${vencedor === 'fora' ? 'opacity-40' : ''}`}>
-          <span className="text-3xl">{selecao_casa.bandeira}</span>
+          <Bandeira codigo={selecao_casa.codigo} emoji={selecao_casa.bandeira} nome={selecao_casa.nome} tamanho="lg" />
           <span className="text-xs font-semibold text-center text-white/80 leading-tight">{selecao_casa.nome}</span>
         </div>
 
@@ -61,7 +62,7 @@ export default function CardPartida({ partida }: Props) {
 
         {/* Time de fora */}
         <div className={`flex flex-col items-center gap-1 flex-1 ${vencedor === 'casa' ? 'opacity-40' : ''}`}>
-          <span className="text-3xl">{selecao_fora.bandeira}</span>
+          <Bandeira codigo={selecao_fora.codigo} emoji={selecao_fora.bandeira} nome={selecao_fora.nome} tamanho="lg" />
           <span className="text-xs font-semibold text-center text-white/80 leading-tight">{selecao_fora.nome}</span>
         </div>
       </div>

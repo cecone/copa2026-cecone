@@ -1,4 +1,5 @@
 import { PartidaEliminatoria } from '@/lib/dados-mock'
+import Bandeira from './Bandeira'
 
 type Props = {
   partida: PartidaEliminatoria
@@ -48,7 +49,10 @@ export default function CardEliminatoria({ partida }: Props) {
         {/* Casa */}
         <div className="flex items-center justify-between gap-3">
           <div className={`flex items-center gap-3 flex-1 min-w-0 ${vencedor === 'fora' ? 'opacity-40' : ''}`}>
-            <span className="text-2xl">{aDefinir || !selecao_casa ? '?' : selecao_casa.bandeira}</span>
+            {aDefinir || !selecao_casa
+              ? <span className="text-2xl">❓</span>
+              : <Bandeira codigo={selecao_casa.codigo} emoji={selecao_casa.bandeira} nome={selecao_casa.nome} tamanho="md" />
+            }
             <span className={`text-sm font-semibold truncate ${vencedor === 'casa' ? 'text-white' : 'text-white/70'}`}>
               {aDefinir || !selecao_casa ? 'A definir' : selecao_casa.nome}
             </span>
@@ -71,7 +75,10 @@ export default function CardEliminatoria({ partida }: Props) {
         {/* Fora */}
         <div className="flex items-center justify-between gap-3">
           <div className={`flex items-center gap-3 flex-1 min-w-0 ${vencedor === 'casa' ? 'opacity-40' : ''}`}>
-            <span className="text-2xl">{aDefinir || !selecao_fora ? '?' : selecao_fora.bandeira}</span>
+            {aDefinir || !selecao_fora
+              ? <span className="text-2xl">❓</span>
+              : <Bandeira codigo={selecao_fora.codigo} emoji={selecao_fora.bandeira} nome={selecao_fora.nome} tamanho="md" />
+            }
             <span className={`text-sm font-semibold truncate ${vencedor === 'fora' ? 'text-white' : 'text-white/70'}`}>
               {aDefinir || !selecao_fora ? 'A definir' : selecao_fora.nome}
             </span>

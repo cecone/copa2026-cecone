@@ -22,7 +22,7 @@ export type Grupo = {
   times: ClassificacaoGrupo[]
 }
 
-export type FaseEliminatoria = 'oitavas' | 'quartas' | 'semi' | 'terceiro' | 'final'
+export type FaseEliminatoria = 'rodada32' | 'oitavas' | 'quartas' | 'semi' | 'terceiro' | 'final'
 
 export type StatusPartida = 'encerrada' | 'ao_vivo' | 'agendada'
 

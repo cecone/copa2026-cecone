@@ -1,0 +1,12 @@
+{
+  "crons": [
+    {
+      "path": "/api/sincronizar?tipo=vivo",
+      "schedule": "*/2 * * * *"
+    },
+    {
+      "path": "/api/sincronizar?tipo=tudo",
+      "schedule": "0 */4 * * *"
+    }
+  ]
+}
