@@ -3,6 +3,7 @@ import { createAdminClient } from '@/lib/supabase-admin'
 import { redirect, notFound } from 'next/navigation'
 import Link from 'next/link'
 import FormPalpite from '@/components/FormPalpite'
+import FormPalpiteEspecial from '@/components/FormPalpiteEspecial'
 import { Partida } from '@/types'
 
 type Props = {
@@ -105,6 +106,21 @@ export default async function GrupoBolaoPage({ params }: Props) {
 
   const ranking = calcularRanking(membros ?? [], todosPalpites ?? [], partidas)
 
+  // Buscar seleções para palpites especiais
+  const { data: selecoes } = await admin
+    .from('selecoes')
+    .select('id, nome, codigo, bandeira')
+    .not('grupo', 'is', null)
+    .order('nome', { ascending: true })
+
+  // Buscar palpite especial do usuário neste grupo
+  const { data: palpiteEspecial } = await supabase
+    .from('palpites_especiais')
+    .select('campeao_id, artilheiro_id')
+    .eq('grupo_id', id)
+    .eq('user_id', user.id)
+    .single()
+
   return (
     <div className="min-h-screen p-4 sm:p-8">
       <div className="max-w-lg mx-auto">
@@ -155,6 +171,13 @@ export default async function GrupoBolaoPage({ params }: Props) {
             ))
           )}
         </div>
+
+        {/* Palpites especiais */}
+        <FormPalpiteEspecial
+          grupoId={id}
+          selecoes={selecoes ?? []}
+          palpiteAtual={palpiteEspecial ?? null}
+        />
 
         {/* Palpites */}
         <h3 className="text-lg font-bold text-white mb-4">Seus Palpites</h3>
