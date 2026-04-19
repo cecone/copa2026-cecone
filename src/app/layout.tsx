@@ -10,6 +10,11 @@ const geist = Geist({
 export const metadata: Metadata = {
   title: "Copa 2026 do Cecone",
   description: "Tabela ao vivo e bolão da Copa do Mundo 2026",
+  icons: {
+    icon: [
+      { url: '/favicon.svg', type: 'image/svg+xml' },
+    ],
+  },
 };
 
 export default function RootLayout({

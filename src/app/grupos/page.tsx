@@ -1,3 +1,4 @@
+import LogoApp from '@/components/LogoApp'
 import { createClient } from '@/lib/supabase-server'
 import TabelaGrupo from '@/components/TabelaGrupo'
 import { Grupo } from '@/types'
@@ -51,9 +52,7 @@ export default async function GruposPage() {
           <Link href="/" className="text-white/40 hover:text-white text-sm transition-colors">
             ← Início
           </Link>
-          <h1 className="text-xl font-black text-[var(--copa-gold)] tracking-tight">
-            Copa 2026 do Cecone
-          </h1>
+          <LogoApp horizontal />
         </div>
 
         <h2 className="text-2xl font-bold text-white mb-6">Fase de Grupos</h2>

@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80">
+  <defs>
+    <radialGradient id="g" cx="38%" cy="35%" r="55%">
+      <stop offset="0%" stop-color="#1a4fd6"/>
+      <stop offset="100%" stop-color="#002580"/>
+    </radialGradient>
+  </defs>
+  <circle cx="40" cy="40" r="40" fill="url(#g)"/>
+  <circle cx="40" cy="40" r="38" fill="none" stroke="#F5A623" stroke-width="3"/>
+  <line x1="40" y1="14" x2="62" y2="27" stroke="#F5A623" stroke-width="1.5" opacity="0.5"/>
+  <line x1="62" y1="27" x2="54" y2="54" stroke="#F5A623" stroke-width="1.5" opacity="0.5"/>
+  <line x1="54" y1="54" x2="26" y2="54" stroke="#F5A623" stroke-width="1.5" opacity="0.5"/>
+  <line x1="26" y1="54" x2="18" y2="27" stroke="#F5A623" stroke-width="1.5" opacity="0.5"/>
+  <line x1="18" y1="27" x2="40" y2="14" stroke="#F5A623" stroke-width="1.5" opacity="0.5"/>
+  <circle cx="40" cy="14" r="3" fill="#F5A623"/>
+  <circle cx="62" cy="27" r="3" fill="#F5A623"/>
+  <circle cx="54" cy="54" r="3" fill="#F5A623"/>
+  <circle cx="26" cy="54" r="3" fill="#F5A623"/>
+  <circle cx="18" cy="27" r="3" fill="#F5A623"/>
+  <text x="40" y="50" text-anchor="middle" fill="#F5A623" font-size="26" font-weight="900" font-family="Arial,Helvetica,sans-serif" letter-spacing="-1">26</text>
+</svg>

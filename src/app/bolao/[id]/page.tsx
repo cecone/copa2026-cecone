@@ -1,3 +1,4 @@
+import LogoApp from '@/components/LogoApp'
 import { createClient } from '@/lib/supabase-server'
 import { createAdminClient } from '@/lib/supabase-admin'
 import { redirect, notFound } from 'next/navigation'
@@ -142,9 +143,7 @@ export default async function GrupoBolaoPage({ params }: Props) {
           <Link href="/bolao" className="text-white/40 hover:text-white text-sm transition-colors">
             ← Bolão
           </Link>
-          <h1 className="text-xl font-black text-[var(--copa-gold)] tracking-tight">
-            Copa 2026 do Cecone
-          </h1>
+          <LogoApp horizontal />
         </div>
 
         {/* Nome do grupo */}

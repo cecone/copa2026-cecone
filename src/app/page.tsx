@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase-server'
 import BotaoLogin from '@/components/BotaoLogin'
 import BotaoLogout from '@/components/BotaoLogout'
+import LogoApp from '@/components/LogoApp'
 import Link from 'next/link'
 
 export default async function Home() {
@@ -9,10 +10,8 @@ export default async function Home() {
 
   return (
     <main className="flex flex-col items-center justify-center min-h-screen gap-8 p-8">
-      <h1 className="text-4xl font-bold text-[var(--copa-gold)] text-center">
-        Copa 2026 do Cecone
-      </h1>
-      <p className="text-lg text-center opacity-70">
+      <LogoApp tamanho="lg" />
+      <p className="text-base text-center text-white/50 -mt-2">
         Tabela ao vivo e bolão da Copa do Mundo 2026
       </p>
 
