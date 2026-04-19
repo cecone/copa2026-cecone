@@ -251,6 +251,8 @@ async function sincronizarPartidas(admin: ReturnType<typeof createAdminClient>) 
   const partidas: WC2026Match[] = Array.isArray(json) ? json : (json.data ?? [])
 
   for (const p of partidas) {
+    if (!p.home_team || !p.away_team) continue  // times ainda não definidos (fase eliminatória futura)
+
     const casaCodigo = codigoDoNome(p.home_team)
     const foraCodigo = codigoDoNome(p.away_team)
 
