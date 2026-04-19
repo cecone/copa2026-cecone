@@ -100,7 +100,10 @@ export async function salvarPalpiteEspecial(
     { onConflict: 'user_id,grupo_id' }
   )
 
-  if (error) return { erro: 'Erro ao salvar palpite especial.' }
+  if (error) {
+    console.error('[salvarPalpiteEspecial]', error)
+    return { erro: `Erro ao salvar palpite especial: ${error.message}` }
+  }
 
   revalidatePath(`/bolao/${grupoId}`)
   return { ok: true }
