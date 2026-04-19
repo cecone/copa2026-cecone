@@ -95,13 +95,15 @@ export async function salvarPalpiteEspecial(
 
   const admin = createAdminClient()
 
+  console.log('[salvarPalpiteEspecial] valores:', { grupoId, campeaoId, artilheiroId, userId: user.id })
+
   const { error } = await admin.from('palpites_especiais').upsert(
     { user_id: user.id, grupo_id: grupoId, campeao_id: campeaoId, artilheiro_id: artilheiroId },
     { onConflict: 'user_id,grupo_id' }
   )
 
   if (error) {
-    console.error('[salvarPalpiteEspecial]', error)
+    console.error('[salvarPalpiteEspecial] erro:', error)
     return { erro: `Erro ao salvar palpite especial: ${error.message}` }
   }
 
