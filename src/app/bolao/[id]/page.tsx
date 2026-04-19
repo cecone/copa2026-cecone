@@ -106,6 +106,19 @@ export default async function GrupoBolaoPage({ params }: Props) {
 
   const ranking = calcularRanking(membros ?? [], todosPalpites ?? [], partidas)
 
+  // Buscar nomes dos membros do grupo via admin
+  const userIds = (membros ?? []).map(m => m.user_id)
+  const nomesPorId = new Map<string, string>()
+  await Promise.all(
+    userIds.map(async (uid) => {
+      const { data } = await admin.auth.admin.getUserById(uid)
+      if (data.user) {
+        const nome = data.user.user_metadata?.full_name as string | undefined
+        nomesPorId.set(uid, nome ?? data.user.email?.split('@')[0] ?? 'Participante')
+      }
+    })
+  )
+
   // Buscar seleções para palpites especiais
   const { data: selecoes } = await admin
     .from('selecoes')
@@ -163,7 +176,9 @@ export default async function GrupoBolaoPage({ params }: Props) {
                     {i + 1}
                   </span>
                   <span className="text-sm text-white/70">
-                    {r.userId === user.id ? `${user.user_metadata.full_name ?? 'Você'} (você)` : 'Participante'}
+                    {r.userId === user.id
+                      ? `${user.user_metadata.full_name ?? nomesPorId.get(r.userId) ?? 'Você'} (você)`
+                      : nomesPorId.get(r.userId) ?? 'Participante'}
                   </span>
                 </div>
                 <span className="font-bold text-white">{r.pontos} pts</span>
