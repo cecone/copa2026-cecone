@@ -90,7 +90,7 @@ export default async function GrupoBolaoPage({ params }: Props) {
   const partidas = (partidasData ?? []).map(r => rowToPartida(r as unknown as PartidaRow))
 
   // Buscar palpites do usuário neste grupo
-  const { data: meusPalpites } = await supabase
+  const { data: meusPalpites } = await admin
     .from('palpites')
     .select('partida_id, gols_casa, gols_fora')
     .eq('grupo_id', id)
@@ -101,7 +101,7 @@ export default async function GrupoBolaoPage({ params }: Props) {
   )
 
   // Buscar todos os palpites para o ranking
-  const { data: todosPalpites } = await supabase
+  const { data: todosPalpites } = await admin
     .from('palpites')
     .select('user_id, partida_id, gols_casa, gols_fora')
     .eq('grupo_id', id)
@@ -129,7 +129,7 @@ export default async function GrupoBolaoPage({ params }: Props) {
     .order('nome', { ascending: true })
 
   // Buscar palpite especial do usuário neste grupo
-  const { data: palpiteEspecial } = await supabase
+  const { data: palpiteEspecial } = await admin
     .from('palpites_especiais')
     .select('campeao_id, artilheiro_id')
     .eq('grupo_id', id)
