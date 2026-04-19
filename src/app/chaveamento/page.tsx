@@ -1,7 +1,7 @@
-import LogoApp from '@/components/LogoApp'
 'use client'
 
 import { useState, useEffect } from 'react'
+import LogoApp from '@/components/LogoApp'
 import Link from 'next/link'
 import CardEliminatoria from '@/components/CardEliminatoria'
 import { PartidaEliminatoria } from '@/lib/dados-mock'
