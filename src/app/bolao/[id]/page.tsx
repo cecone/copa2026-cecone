@@ -49,8 +49,10 @@ export default async function GrupoBolaoPage({ params }: Props) {
 
   if (!user) redirect('/')
 
-  // Buscar grupo
-  const { data: grupo } = await supabase
+  // Buscar grupo e verificar associação via admin (evita problema de RLS no momento da criação)
+  const admin = createAdminClient()
+
+  const { data: grupo } = await admin
     .from('grupos_bolao')
     .select('*')
     .eq('id', id)
@@ -58,8 +60,8 @@ export default async function GrupoBolaoPage({ params }: Props) {
 
   if (!grupo) notFound()
 
-  // Verificar se é membro
-  const { data: membro } = await supabase
+  // Verificar se é membro (admin client, sem dependência de RLS)
+  const { data: membro } = await admin
     .from('membros_grupo')
     .select('id')
     .eq('grupo_id', id)
@@ -69,13 +71,12 @@ export default async function GrupoBolaoPage({ params }: Props) {
   if (!membro) redirect('/bolao')
 
   // Buscar membros do grupo
-  const { data: membros } = await supabase
+  const { data: membros } = await admin
     .from('membros_grupo')
     .select('user_id')
     .eq('grupo_id', id)
 
   // Buscar partidas da fase de grupos do Supabase
-  const admin = createAdminClient()
   const { data: partidasData } = await admin
     .from('partidas')
     .select(`
