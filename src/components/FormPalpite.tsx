@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { salvarPalpite } from '@/app/bolao/actions'
+import Bandeira from './Bandeira'
 import { Partida } from '@/types'
 
 type Props = {
@@ -40,13 +41,13 @@ export default function FormPalpite({ partida, grupoId, palpiteAtual }: Props) {
       {/* Times */}
       <div className="flex items-center justify-between gap-2 mb-3">
         <div className="flex items-center gap-2 flex-1 min-w-0">
-          <span className="text-xl">{partida.selecao_casa.bandeira}</span>
+          <Bandeira codigo={partida.selecao_casa.codigo} emoji={partida.selecao_casa.bandeira} nome={partida.selecao_casa.nome} tamanho="sm" />
           <span className="text-sm font-medium text-white/80 truncate">{partida.selecao_casa.nome}</span>
         </div>
         <span className="text-white/20 text-xs">vs</span>
         <div className="flex items-center gap-2 flex-1 min-w-0 justify-end">
           <span className="text-sm font-medium text-white/80 truncate text-right">{partida.selecao_fora.nome}</span>
-          <span className="text-xl">{partida.selecao_fora.bandeira}</span>
+          <Bandeira codigo={partida.selecao_fora.codigo} emoji={partida.selecao_fora.bandeira} nome={partida.selecao_fora.nome} tamanho="sm" />
         </div>
       </div>
 
