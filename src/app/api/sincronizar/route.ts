@@ -123,32 +123,16 @@ async function seedDeOpenFootball(admin: ReturnType<typeof createAdminClient>) {
   // Montar mapa nome → id para FK
   const nomeParaId = new Map(Array.from(timesMap.entries()).map(([nome, t]) => [nome, t.id]))
 
-  // Remover partidas duplicadas existentes (mesmo casa+fora+data, IDs diferentes)
-  const { data: partExistentes } = await admin
+  // Apagar todas as partidas do seed (IDs 10000–89999) que não foram corrigidas manualmente.
+  // Isso garante uma re-inserção limpa e elimina duplicatas de execuções anteriores.
+  await admin
     .from('partidas')
-    .select('id, selecao_casa_id, selecao_fora_id, data_hora, corrigida_manualmente')
-    .not('selecao_casa_id', 'is', null)
-    .not('selecao_fora_id', 'is', null)
+    .delete()
+    .gte('id', 10000)
+    .lte('id', 89999)
+    .neq('corrigida_manualmente', true)
 
-  if (partExistentes && partExistentes.length > 0) {
-    const vistas = new Map<string, number>()
-    const paraApagar: number[] = []
-
-    for (const p of [...partExistentes].sort((a, b) => a.id - b.id)) {
-      const chave = `${p.selecao_casa_id}-${p.selecao_fora_id}-${String(p.data_hora).slice(0, 10)}`
-      if (vistas.has(chave)) {
-        if (!p.corrigida_manualmente) paraApagar.push(p.id)
-      } else {
-        vistas.set(chave, p.id)
-      }
-    }
-
-    if (paraApagar.length > 0) {
-      await admin.from('partidas').delete().in('id', paraApagar)
-    }
-  }
-
-  // Upsert partidas com IDs estáveis
+  // Inserir partidas com IDs estáveis
   let partidasInseridas = 0
 
   for (const m of matches) {
@@ -172,7 +156,7 @@ async function seedDeOpenFootball(admin: ReturnType<typeof createAdminClient>) {
         gols_fora: null,
         status: 'agendada',
       }
-      await admin.from('partidas').upsert(partida, { onConflict: 'id', ignoreDuplicates: true })
+      await admin.from('partidas').insert(partida)
       continue
     }
 
@@ -197,7 +181,7 @@ async function seedDeOpenFootball(admin: ReturnType<typeof createAdminClient>) {
       status: 'agendada',
     }
 
-    await admin.from('partidas').upsert(partida, { onConflict: 'id', ignoreDuplicates: true })
+    await admin.from('partidas').insert(partida)
     partidasInseridas++
   }
 
