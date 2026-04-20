@@ -63,6 +63,19 @@ export async function GET(req: NextRequest) {
 }
 
 // ================================================================
+// Hash estável: gera um número fixo a partir de uma string.
+// Garante que o mesmo jogo/time sempre receba o mesmo ID,
+// independente da ordem de processamento ou de re-execuções.
+// ================================================================
+function hashInt(str: string, base: number, range: number): number {
+  let h = 5381
+  for (let i = 0; i < str.length; i++) {
+    h = (Math.imul(31, h) + str.charCodeAt(i)) | 0
+  }
+  return (Math.abs(h) % range) + base
+}
+
+// ================================================================
 // SEED: openfootball (calendário completo, sem chave)
 // ================================================================
 async function seedDeOpenFootball(admin: ReturnType<typeof createAdminClient>) {
@@ -74,7 +87,6 @@ async function seedDeOpenFootball(admin: ReturnType<typeof createAdminClient>) {
 
   // Coletar times únicos por nome
   const timesMap = new Map<string, { id: number; nome: string; codigo: string; grupo: string | null }>()
-  let idFake = 1000 // IDs locais para times (sem ID da API)
 
   for (const m of matches) {
     const time1 = m.team1
@@ -87,15 +99,15 @@ async function seedDeOpenFootball(admin: ReturnType<typeof createAdminClient>) {
       if (!timesMap.has(nome)) {
         const codigo = codigoDoNome(nome)
         const grupo = m.group?.replace('Group ', '') ?? null
-        timesMap.set(nome, { id: idFake++, nome: nomePtBr(nome), codigo, grupo })
+        // ID estável baseado no nome do time (range 1000–8999)
+        timesMap.set(nome, { id: hashInt(nome, 1000, 8000), nome: nomePtBr(nome), codigo, grupo })
       } else if (m.group && !timesMap.get(nome)!.grupo) {
-        // Atualizar grupo se ainda não foi definido
         timesMap.get(nome)!.grupo = m.group.replace('Group ', '')
       }
     }
   }
 
-  // Upsert seleções (insert only — não sobrescrever se já existir com ID real da API)
+  // Upsert seleções
   const selecoes = Array.from(timesMap.values()).map(t => ({
     id: t.id,
     nome: t.nome,
@@ -111,9 +123,33 @@ async function seedDeOpenFootball(admin: ReturnType<typeof createAdminClient>) {
   // Montar mapa nome → id para FK
   const nomeParaId = new Map(Array.from(timesMap.entries()).map(([nome, t]) => [nome, t.id]))
 
-  // Upsert partidas
+  // Remover partidas duplicadas existentes (mesmo casa+fora+data, IDs diferentes)
+  const { data: partExistentes } = await admin
+    .from('partidas')
+    .select('id, selecao_casa_id, selecao_fora_id, data_hora, corrigida_manualmente')
+    .not('selecao_casa_id', 'is', null)
+    .not('selecao_fora_id', 'is', null)
+
+  if (partExistentes && partExistentes.length > 0) {
+    const vistas = new Map<string, number>()
+    const paraApagar: number[] = []
+
+    for (const p of [...partExistentes].sort((a, b) => a.id - b.id)) {
+      const chave = `${p.selecao_casa_id}-${p.selecao_fora_id}-${String(p.data_hora).slice(0, 10)}`
+      if (vistas.has(chave)) {
+        if (!p.corrigida_manualmente) paraApagar.push(p.id)
+      } else {
+        vistas.set(chave, p.id)
+      }
+    }
+
+    if (paraApagar.length > 0) {
+      await admin.from('partidas').delete().in('id', paraApagar)
+    }
+  }
+
+  // Upsert partidas com IDs estáveis
   let partidasInseridas = 0
-  let idPartidaFake = 10000
 
   for (const m of matches) {
     const time1 = m.team1
@@ -124,8 +160,9 @@ async function seedDeOpenFootball(admin: ReturnType<typeof createAdminClient>) {
       const { fase_tipo, fase } = mapRoundOpenFootball(m.round)
       if (fase_tipo === 'grupos') continue
 
+      // ID estável baseado em data + rodada (range 10000–89999)
       const partida = {
-        id: idPartidaFake++,
+        id: hashInt(`${m.date ?? ''}|${m.round}|${m.num ?? ''}`, 10000, 80000),
         fase,
         fase_tipo,
         data_hora: m.date ? `${m.date}T${converterHora(m.time)}Z` : null,
@@ -147,8 +184,9 @@ async function seedDeOpenFootball(admin: ReturnType<typeof createAdminClient>) {
     const grupo = m.group?.replace('Group ', '')
     const fase = fase_tipo === 'grupos' && grupo ? `Grupo ${grupo}` : faseBase
 
+    // ID estável baseado em data + times (range 10000–89999)
     const partida = {
-      id: idPartidaFake++,
+      id: hashInt(`${m.date ?? ''}|${time1}|${time2}`, 10000, 80000),
       fase,
       fase_tipo,
       data_hora: m.date ? `${m.date}T${converterHora(m.time)}Z` : null,
