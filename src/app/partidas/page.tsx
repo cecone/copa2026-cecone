@@ -18,7 +18,7 @@ function rowToPartida(row: SupabasePartida): Partida {
   return {
     id: row.id,
     fase: row.fase,
-    data: dt.toISOString().slice(0, 10),
+    data: dt.toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' }),
     hora: dt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' }),
     selecao_casa: selCasa
       ? { id: selCasa.id, nome: selCasa.nome, codigo: selCasa.codigo, bandeira: selCasa.bandeira }
