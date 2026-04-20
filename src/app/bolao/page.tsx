@@ -19,10 +19,6 @@ export default async function BolaoPage() {
     .select('grupo_id, grupos_bolao(id, nome, codigo_convite)')
     .eq('user_id', user.id)
 
-  console.log('[bolao/page] userId:', user.id)
-  console.log('[bolao/page] membros:', JSON.stringify(membros))
-  console.log('[bolao/page] erro:', erroMembros?.message)
-
   type GrupoInfo = { id: string; nome: string; codigo_convite: string }
   const grupos: GrupoInfo[] = (membros ?? [])
     .flatMap(m => (Array.isArray(m.grupos_bolao) ? m.grupos_bolao : m.grupos_bolao ? [m.grupos_bolao] : []))
@@ -43,14 +39,6 @@ export default async function BolaoPage() {
         <p className="text-white/40 text-sm mb-8">
           Olá, {user.user_metadata.full_name ?? user.email}
         </p>
-
-        {/* DEBUG TEMPORÁRIO */}
-        <div className="bg-black/50 rounded p-3 mb-4 text-xs font-mono text-white/60 break-all">
-          <p>userId: {user.id}</p>
-          <p>membros: {JSON.stringify(membros)}</p>
-          <p>erro: {erroMembros?.message ?? 'nenhum'}</p>
-          <p>grupos: {grupos.length}</p>
-        </div>
 
         {/* Grupos existentes */}
         {grupos.length > 0 && (
