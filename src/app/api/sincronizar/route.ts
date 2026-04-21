@@ -202,7 +202,7 @@ async function seedDeOpenFootball(admin: ReturnType<typeof createAdminClient>) {
     partidasInseridas++
   }
 
-  return { times: timesMap.size, partidas: partidasInseridas }
+  return { times: codigoMap.size, partidas: partidasInseridas }
 }
 
 // Converte "13:00 UTC-6" → "19:00" (UTC)
