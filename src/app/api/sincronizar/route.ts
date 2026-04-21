@@ -142,9 +142,15 @@ async function seedDeOpenFootball(admin: ReturnType<typeof createAdminClient>) {
     .gte('selecao_id', 1)
   if (e2) throw new Error(`Erro ao apagar classificação: ${e2.message}`)
 
-  // Upsert seleções: atualiza existentes, insere novas.
-  // Seleções antigas com IDs diferentes ficam como órfãs no banco mas
-  // não aparecem na UI (nenhuma partida ou classificação as referencia).
+  // Verificar duplicatas de ID antes do upsert para diagnóstico claro
+  const seenIds = new Map<number, string>()
+  for (const s of selecoes) {
+    if (seenIds.has(s.id)) {
+      throw new Error(`ID duplicado: "${s.codigo}" e "${seenIds.get(s.id)}" → id=${s.id}`)
+    }
+    seenIds.set(s.id, s.codigo)
+  }
+
   const { error: errSelecoes } = await admin
     .from('selecoes')
     .upsert(selecoes, { onConflict: 'id' })
