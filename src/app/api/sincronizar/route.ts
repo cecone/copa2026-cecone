@@ -95,29 +95,33 @@ async function seedDeOpenFootball(admin: ReturnType<typeof createAdminClient>) {
 
   const matches: OpenFootballMatch[] = json.matches ?? []
 
-  // Coletar times únicos por nome
-  const timesMap = new Map<string, { id: number; nome: string; codigo: string; grupo: string | null }>()
+  // Indexar por CÓDIGO FIFA (não por nome) — evita duplicatas quando o mesmo
+  // time aparece com nomes diferentes (ex: "USA" e "United States")
+  const codigoMap = new Map<string, { id: number; nome: string; codigo: string; grupo: string | null }>()
+  // Mapa auxiliar: nome original → id (para montar as FKs das partidas)
+  const nomeParaId = new Map<string, number>()
 
   for (const m of matches) {
     const time1 = m.team1
     const time2 = m.team2
-    // Ignorar placeholders como "W74", "L101"
     if (!time1 || time1.startsWith('W') || time1.startsWith('L')) continue
     if (!time2 || time2.startsWith('W') || time2.startsWith('L')) continue
 
     for (const nome of [time1, time2]) {
-      if (!timesMap.has(nome)) {
-        const codigo = codigoDoNome(nome)
+      const codigo = codigoDoNome(nome)
+      const id = codigoParaId(codigo)
+      nomeParaId.set(nome, id)
+
+      if (!codigoMap.has(codigo)) {
         const grupo = m.group?.replace('Group ', '') ?? null
-        // ID estável derivado do código FIFA — sem colisões possíveis
-        timesMap.set(nome, { id: codigoParaId(codigo), nome: nomePtBr(nome), codigo, grupo })
-      } else if (m.group && !timesMap.get(nome)!.grupo) {
-        timesMap.get(nome)!.grupo = m.group.replace('Group ', '')
+        codigoMap.set(codigo, { id, nome: nomePtBr(nome), codigo, grupo })
+      } else if (m.group && !codigoMap.get(codigo)!.grupo) {
+        codigoMap.get(codigo)!.grupo = m.group.replace('Group ', '')
       }
     }
   }
 
-  const selecoes = Array.from(timesMap.values()).map(t => ({
+  const selecoes = Array.from(codigoMap.values()).map(t => ({
     id: t.id,
     nome: t.nome,
     codigo: t.codigo,
@@ -126,8 +130,8 @@ async function seedDeOpenFootball(admin: ReturnType<typeof createAdminClient>) {
     grupo: t.grupo,
   }))
 
-  // Limpeza na ordem correta para respeitar dependências de FK:
-  // 1. partidas (referenciam seleções)
+  // Limpeza na ordem correta (respeita dependências de FK):
+  // 1. partidas → 2. classificacao_grupos → 3. seleções
   await admin
     .from('partidas')
     .delete()
@@ -135,22 +139,17 @@ async function seedDeOpenFootball(admin: ReturnType<typeof createAdminClient>) {
     .lte('id', 909999)
     .neq('corrigida_manualmente', true)
 
-  // 2. classificacao_grupos (referenciam seleções)
   await admin
     .from('classificacao_grupos')
     .delete()
     .gte('selecao_id', 1000)
     .lte('selecao_id', 19999)
 
-  // 3. seleções
   await admin.from('selecoes').delete().gte('id', 1000).lte('id', 19999)
 
-  // Inserir seleções com IDs estáveis
+  // Inserir seleções limpas (uma por código FIFA, sem duplicatas)
   const { error: errSelecoes } = await admin.from('selecoes').insert(selecoes)
   if (errSelecoes) throw new Error(`Erro ao inserir seleções: ${errSelecoes.message}`)
-
-  // Montar mapa nome → id para FK
-  const nomeParaId = new Map(Array.from(timesMap.entries()).map(([nome, t]) => [nome, t.id]))
 
   // Inserir partidas com IDs estáveis
   let partidasInseridas = 0
