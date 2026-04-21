@@ -63,13 +63,15 @@ export async function GET(req: NextRequest) {
 }
 
 // ================================================================
-// ID estável para seleções: converte código FIFA (3 letras) em número único.
-// Sem colisões possíveis — cada código gera um ID diferente.
-// Ex: BRA → 2821, MEX → 9942. Range: 1003–19278.
+// ID estável para seleções: converte código FIFA em número único.
+// Sanitiza para sempre ter exatamente 3 letras A-Z antes de calcular.
+// Ex: BRA → 2821, MEX → 9942. Range: 1003–19278. Sem colisões.
 function codigoParaId(codigo: string): number {
-  const a = codigo.charCodeAt(0) - 64  // A=1, B=2, ..., Z=26
-  const b = codigo.charCodeAt(1) - 64
-  const c = codigo.charCodeAt(2) - 64
+  // Remove não-letras e garante 3 chars com padding 'A'
+  const s = ((codigo ?? '').toUpperCase().replace(/[^A-Z]/g, '') + 'AAA').slice(0, 3)
+  const a = s.charCodeAt(0) - 64  // A=1, B=2, ..., Z=26
+  const b = s.charCodeAt(1) - 64
+  const c = s.charCodeAt(2) - 64
   return a * 676 + b * 26 + c + 1000
 }
 
