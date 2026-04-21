@@ -126,15 +126,23 @@ async function seedDeOpenFootball(admin: ReturnType<typeof createAdminClient>) {
     grupo: t.grupo,
   }))
 
-  // Apagar todas as partidas do seed antes de re-inserir (evita duplicatas por IDs antigos)
+  // Limpeza na ordem correta para respeitar dependências de FK:
+  // 1. partidas (referenciam seleções)
   await admin
     .from('partidas')
     .delete()
     .gte('id', 10000)
-    .lte('id', 89999)
+    .lte('id', 909999)
     .neq('corrigida_manualmente', true)
 
-  // Apagar seleções antigas do seed (IDs 1000–19999) antes de re-inserir com IDs estáveis
+  // 2. classificacao_grupos (referenciam seleções)
+  await admin
+    .from('classificacao_grupos')
+    .delete()
+    .gte('selecao_id', 1000)
+    .lte('selecao_id', 19999)
+
+  // 3. seleções
   await admin.from('selecoes').delete().gte('id', 1000).lte('id', 19999)
 
   // Inserir seleções com IDs estáveis
