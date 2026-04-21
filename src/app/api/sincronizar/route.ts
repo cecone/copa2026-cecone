@@ -172,7 +172,7 @@ async function seedDeOpenFootball(admin: ReturnType<typeof createAdminClient>) {
         id: hashPartidaId(`${m.date ?? ''}|${m.round}|${m.num ?? ''}`),
         fase,
         fase_tipo,
-        data_hora: m.date ? `${m.date}T${converterHora(m.time)}Z` : null,
+        data_hora: m.date ? converterDataHora(m.date, m.time) : null,
         selecao_casa_id: null,
         selecao_fora_id: null,
         gols_casa: null,
@@ -210,16 +210,18 @@ async function seedDeOpenFootball(admin: ReturnType<typeof createAdminClient>) {
   return { times: codigoMap.size, partidas: partidasInseridas, selecoes }
 }
 
-// Converte "13:00 UTC-6" → "19:00" (UTC)
-function converterHora(timeStr: string | undefined): string {
-  if (!timeStr) return '18:00:00'
+// Converte data + hora local ("2026-06-11", "20:00 UTC-6") para ISO UTC correto.
+// Trata overflow de meia-noite: "20:00 UTC-6" no dia 11 → "2026-06-12T02:00:00Z".
+function converterDataHora(dateStr: string, timeStr: string | undefined): string {
+  if (!timeStr) return `${dateStr}T18:00:00Z`
   const match = timeStr.match(/(\d+):(\d+)\s*UTC([+-]\d+)/)
-  if (!match) return '18:00:00'
-  const h = parseInt(match[1])
-  const m = parseInt(match[2])
-  const offset = parseInt(match[3])
-  const utcH = ((h - offset) + 24) % 24
-  return `${String(utcH).padStart(2, '0')}:${String(m).padStart(2, '0')}:00`
+  if (!match) return `${dateStr}T18:00:00Z`
+  const localMin = parseInt(match[1]) * 60 + parseInt(match[2])
+  const offsetMin = parseInt(match[3]) * 60  // negativo para UTC-X
+  const utcMin = localMin - offsetMin         // UTC = local + |offset|
+  const base = new Date(`${dateStr}T00:00:00Z`)
+  base.setUTCMinutes(base.getUTCMinutes() + utcMin)
+  return base.toISOString().slice(0, 19) + 'Z'
 }
 
 function mapRoundOpenFootball(round: string): { fase_tipo: string; fase: string } {
