@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { atualizarPartida } from '@/app/admin/actions'
+import Bandeira from '@/components/Bandeira'
 import { emojiBandeira } from '@/lib/emoji-bandeiras'
 
 type Partida = {
@@ -28,8 +29,6 @@ export default function FormEditarPartida({ partida }: Props) {
 
   const nomeCasa = partida.selecao_casa?.nome ?? '?'
   const nomeFora = partida.selecao_fora?.nome ?? '?'
-  const flagCasa = partida.selecao_casa ? emojiBandeira(partida.selecao_casa.codigo) : '?'
-  const flagFora = partida.selecao_fora ? emojiBandeira(partida.selecao_fora.codigo) : '?'
 
   async function handleSalvar() {
     setSalvando(true)
@@ -56,13 +55,17 @@ export default function FormEditarPartida({ partida }: Props) {
       {/* Times */}
       <div className="flex items-center justify-between gap-2 mb-3">
         <div className="flex items-center gap-2 flex-1 min-w-0">
-          <span className="text-xl">{flagCasa}</span>
+          {partida.selecao_casa && (
+            <Bandeira codigo={partida.selecao_casa.codigo} emoji={emojiBandeira(partida.selecao_casa.codigo)} nome={nomeCasa} tamanho="sm" />
+          )}
           <span className="text-sm font-semibold text-white/80 truncate">{nomeCasa}</span>
         </div>
         <span className="text-white/20 text-xs shrink-0">vs</span>
         <div className="flex items-center gap-2 flex-1 min-w-0 justify-end">
           <span className="text-sm font-semibold text-white/80 truncate text-right">{nomeFora}</span>
-          <span className="text-xl">{flagFora}</span>
+          {partida.selecao_fora && (
+            <Bandeira codigo={partida.selecao_fora.codigo} emoji={emojiBandeira(partida.selecao_fora.codigo)} nome={nomeFora} tamanho="sm" />
+          )}
         </div>
       </div>
 
