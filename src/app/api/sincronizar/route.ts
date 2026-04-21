@@ -36,8 +36,8 @@ export async function GET(req: NextRequest) {
     if (tipo === 'sementes') {
       // Seed inicial a partir do openfootball (sem chave de API)
       const resultado = await seedDeOpenFootball(admin)
-      // Popular classificação inicial com todos os times (0 pontos)
-      await seedClassificacaoInicial(admin)
+      // Popular classificação inicial usando as seleções do seed atual
+      await seedClassificacaoInicial(admin, resultado.selecoes)
       return NextResponse.json({ ok: true, tipo: 'sementes', ...resultado })
     }
 
@@ -207,7 +207,7 @@ async function seedDeOpenFootball(admin: ReturnType<typeof createAdminClient>) {
     partidasInseridas++
   }
 
-  return { times: codigoMap.size, partidas: partidasInseridas }
+  return { times: codigoMap.size, partidas: partidasInseridas, selecoes }
 }
 
 // Converte "13:00 UTC-6" → "19:00" (UTC)
@@ -234,26 +234,23 @@ function mapRoundOpenFootball(round: string): { fase_tipo: string; fase: string 
 }
 
 // ================================================================
-// Seed inicial da classificação (times já no banco, 0 pontos)
+// Seed inicial da classificação (usa seleções do seed atual, não do banco)
 // ================================================================
-async function seedClassificacaoInicial(admin: ReturnType<typeof createAdminClient>) {
-  // Busca times que têm grupo definido
-  const { data: times } = await admin
-    .from('selecoes')
-    .select('id, grupo')
-    .not('grupo', 'is', null)
-
-  if (!times || times.length === 0) return
-
-  const linhas = times
+async function seedClassificacaoInicial(
+  admin: ReturnType<typeof createAdminClient>,
+  selecoes: { id: number; grupo: string | null }[]
+) {
+  const linhas = selecoes
     .filter(t => t.grupo)
     .map((t, i) => ({
       selecao_id: t.id,
       grupo: t.grupo!,
-      posicao: (i % 4) + 1, // posição inicial provisória
+      posicao: (i % 4) + 1,
       jogos: 0, vitorias: 0, empates: 0, derrotas: 0,
       gols_marcados: 0, gols_sofridos: 0, saldo: 0, pontos: 0,
     }))
+
+  if (linhas.length === 0) return
 
   await admin
     .from('classificacao_grupos')
