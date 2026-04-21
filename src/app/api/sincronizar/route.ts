@@ -128,8 +128,8 @@ async function seedDeOpenFootball(admin: ReturnType<typeof createAdminClient>) {
 
   // Limpeza na ordem correta (respeita dependências de FK):
   // 1. partidas → 2. classificacao_grupos → 3. seleções
-  // Deletar TODAS as partidas não corrigidas (sem filtro de ID — garante que
-  // partidas com IDs fora do range também sejam removidas antes das seleções)
+  // Deletar partidas e classificação (sem dados de usuário, seguro remover)
+  // Não deletamos seleções pois palpites_especiais tem FK para elas
   const { error: e1 } = await admin
     .from('partidas')
     .delete()
@@ -142,13 +142,9 @@ async function seedDeOpenFootball(admin: ReturnType<typeof createAdminClient>) {
     .gte('selecao_id', 1)
   if (e2) throw new Error(`Erro ao apagar classificação: ${e2.message}`)
 
-  const { error: e3 } = await admin
-    .from('selecoes')
-    .delete()
-    .gte('id', 1000)
-  if (e3) throw new Error(`Erro ao apagar seleções: ${e3.message}`)
-
-  // Upsert seleções (onConflict garante idempotência mesmo se delete falhou parcialmente)
+  // Upsert seleções: atualiza existentes, insere novas.
+  // Seleções antigas com IDs diferentes ficam como órfãs no banco mas
+  // não aparecem na UI (nenhuma partida ou classificação as referencia).
   const { error: errSelecoes } = await admin
     .from('selecoes')
     .upsert(selecoes, { onConflict: 'id' })
