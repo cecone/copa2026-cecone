@@ -63,16 +63,12 @@ export async function GET(req: NextRequest) {
 }
 
 // ================================================================
-// ID estável para seleções: converte código FIFA em número único.
-// Sanitiza para sempre ter exatamente 3 letras A-Z antes de calcular.
-// Ex: BRA → 2821, MEX → 9942. Range: 1003–19278. Sem colisões.
+// ID estável para seleções: usa ASCII direto sem normalização.
+// BRA → 66*10000 + 82*100 + 65 = 668265. Range: 656565–909090.
+// Matematicamente impossível colidir para qualquer par de códigos A-Z distintos.
 function codigoParaId(codigo: string): number {
-  // Remove não-letras e garante 3 chars com padding 'A'
   const s = ((codigo ?? '').toUpperCase().replace(/[^A-Z]/g, '') + 'AAA').slice(0, 3)
-  const a = s.charCodeAt(0) - 64  // A=1, B=2, ..., Z=26
-  const b = s.charCodeAt(1) - 64
-  const c = s.charCodeAt(2) - 64
-  return a * 676 + b * 26 + c + 1000
+  return s.charCodeAt(0) * 10000 + s.charCodeAt(1) * 100 + s.charCodeAt(2)
 }
 
 // ID estável para partidas: hash da string data+times.
@@ -143,9 +139,9 @@ async function seedDeOpenFootball(admin: ReturnType<typeof createAdminClient>) {
     .from('classificacao_grupos')
     .delete()
     .gte('selecao_id', 1000)
-    .lte('selecao_id', 19999)
+    .lte('selecao_id', 999999)
 
-  await admin.from('selecoes').delete().gte('id', 1000).lte('id', 19999)
+  await admin.from('selecoes').delete().gte('id', 1000).lte('id', 999999)
 
   // Inserir seleções limpas (uma por código FIFA, sem duplicatas)
   const { error: errSelecoes } = await admin.from('selecoes').insert(selecoes)
