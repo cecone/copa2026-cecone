@@ -128,23 +128,32 @@ async function seedDeOpenFootball(admin: ReturnType<typeof createAdminClient>) {
 
   // Limpeza na ordem correta (respeita dependências de FK):
   // 1. partidas → 2. classificacao_grupos → 3. seleções
-  await admin
+  const { error: e1 } = await admin
     .from('partidas')
     .delete()
     .gte('id', 10000)
     .lte('id', 909999)
     .neq('corrigida_manualmente', true)
+  if (e1) throw new Error(`Erro ao apagar partidas: ${e1.message}`)
 
-  await admin
+  const { error: e2 } = await admin
     .from('classificacao_grupos')
     .delete()
     .gte('selecao_id', 1000)
     .lte('selecao_id', 999999)
+  if (e2) throw new Error(`Erro ao apagar classificação: ${e2.message}`)
 
-  await admin.from('selecoes').delete().gte('id', 1000).lte('id', 999999)
+  const { error: e3 } = await admin
+    .from('selecoes')
+    .delete()
+    .gte('id', 1000)
+    .lte('id', 999999)
+  if (e3) throw new Error(`Erro ao apagar seleções: ${e3.message}`)
 
-  // Inserir seleções limpas (uma por código FIFA, sem duplicatas)
-  const { error: errSelecoes } = await admin.from('selecoes').insert(selecoes)
+  // Upsert seleções (onConflict garante idempotência mesmo se delete falhou parcialmente)
+  const { error: errSelecoes } = await admin
+    .from('selecoes')
+    .upsert(selecoes, { onConflict: 'id' })
   if (errSelecoes) throw new Error(`Erro ao inserir seleções: ${errSelecoes.message}`)
 
   // Inserir partidas com IDs estáveis
