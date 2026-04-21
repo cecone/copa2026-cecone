@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { atualizarPartida } from '@/app/admin/actions'
+import { emojiBandeira } from '@/lib/emoji-bandeiras'
 
 type Partida = {
   id: number
@@ -17,13 +18,6 @@ type Partida = {
 
 type Props = { partida: Partida }
 
-const bandeiras: Record<string, string> = {
-  BRA: '🇧🇷', MEX: '🇲🇽', SRB: '🇷🇸', CMR: '🇨🇲',
-  ARG: '🇦🇷', POL: '🇵🇱', KSA: '🇸🇦', AUS: '🇦🇺',
-  FRA: '🇫🇷', DEN: '🇩🇰', TUN: '🇹🇳', PER: '🇵🇪',
-  ENG: '🏴󠁧󠁢󠁥󠁮󠁧󠁿', USA: '🇺🇸', IRN: '🇮🇷', WAL: '🏴󠁧󠁢󠁷󠁬󠁳󠁿',
-}
-
 export default function FormEditarPartida({ partida }: Props) {
   const [golsCasa, setGolsCasa] = useState<string>(partida.gols_casa?.toString() ?? '')
   const [golsFora, setGolsFora] = useState<string>(partida.gols_fora?.toString() ?? '')
@@ -34,8 +28,8 @@ export default function FormEditarPartida({ partida }: Props) {
 
   const nomeCasa = partida.selecao_casa?.nome ?? '?'
   const nomeFora = partida.selecao_fora?.nome ?? '?'
-  const flagCasa = partida.selecao_casa ? (bandeiras[partida.selecao_casa.codigo] ?? '🏳️') : '?'
-  const flagFora = partida.selecao_fora ? (bandeiras[partida.selecao_fora.codigo] ?? '🏳️') : '?'
+  const flagCasa = partida.selecao_casa ? emojiBandeira(partida.selecao_casa.codigo) : '?'
+  const flagFora = partida.selecao_fora ? emojiBandeira(partida.selecao_fora.codigo) : '?'
 
   async function handleSalvar() {
     setSalvando(true)
