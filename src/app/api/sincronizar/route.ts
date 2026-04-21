@@ -63,16 +63,24 @@ export async function GET(req: NextRequest) {
 }
 
 // ================================================================
-// Hash estável: gera um número fixo a partir de uma string.
-// Garante que o mesmo jogo/time sempre receba o mesmo ID,
-// independente da ordem de processamento ou de re-execuções.
-// ================================================================
-function hashInt(str: string, base: number, range: number): number {
+// ID estável para seleções: converte código FIFA (3 letras) em número único.
+// Sem colisões possíveis — cada código gera um ID diferente.
+// Ex: BRA → 2821, MEX → 9942. Range: 1003–19278.
+function codigoParaId(codigo: string): number {
+  const a = codigo.charCodeAt(0) - 64  // A=1, B=2, ..., Z=26
+  const b = codigo.charCodeAt(1) - 64
+  const c = codigo.charCodeAt(2) - 64
+  return a * 676 + b * 26 + c + 1000
+}
+
+// ID estável para partidas: hash da string data+times.
+// Range grande (10000–909999) para minimizar colisões entre ~150 jogos.
+function hashPartidaId(str: string): number {
   let h = 5381
   for (let i = 0; i < str.length; i++) {
     h = (Math.imul(31, h) + str.charCodeAt(i)) | 0
   }
-  return (Math.abs(h) % range) + base
+  return (Math.abs(h) % 900000) + 10000
 }
 
 // ================================================================
@@ -99,8 +107,8 @@ async function seedDeOpenFootball(admin: ReturnType<typeof createAdminClient>) {
       if (!timesMap.has(nome)) {
         const codigo = codigoDoNome(nome)
         const grupo = m.group?.replace('Group ', '') ?? null
-        // ID estável baseado no nome do time (range 1000–8999)
-        timesMap.set(nome, { id: hashInt(nome, 1000, 8000), nome: nomePtBr(nome), codigo, grupo })
+        // ID estável derivado do código FIFA — sem colisões possíveis
+        timesMap.set(nome, { id: codigoParaId(codigo), nome: nomePtBr(nome), codigo, grupo })
       } else if (m.group && !timesMap.get(nome)!.grupo) {
         timesMap.get(nome)!.grupo = m.group.replace('Group ', '')
       }
@@ -124,8 +132,8 @@ async function seedDeOpenFootball(admin: ReturnType<typeof createAdminClient>) {
     .lte('id', 89999)
     .neq('corrigida_manualmente', true)
 
-  // Apagar seleções antigas do seed (IDs 1000–8999) antes de re-inserir com IDs estáveis
-  await admin.from('selecoes').delete().gte('id', 1000).lte('id', 8999)
+  // Apagar seleções antigas do seed (IDs 1000–19999) antes de re-inserir com IDs estáveis
+  await admin.from('selecoes').delete().gte('id', 1000).lte('id', 19999)
 
   // Inserir seleções com IDs estáveis
   const { error: errSelecoes } = await admin.from('selecoes').insert(selecoes)
@@ -146,9 +154,8 @@ async function seedDeOpenFootball(admin: ReturnType<typeof createAdminClient>) {
       const { fase_tipo, fase } = mapRoundOpenFootball(m.round)
       if (fase_tipo === 'grupos') continue
 
-      // ID estável baseado em data + rodada (range 10000–89999)
       const partida = {
-        id: hashInt(`${m.date ?? ''}|${m.round}|${m.num ?? ''}`, 10000, 80000),
+        id: hashPartidaId(`${m.date ?? ''}|${m.round}|${m.num ?? ''}`),
         fase,
         fase_tipo,
         data_hora: m.date ? `${m.date}T${converterHora(m.time)}Z` : null,
@@ -170,9 +177,8 @@ async function seedDeOpenFootball(admin: ReturnType<typeof createAdminClient>) {
     const grupo = m.group?.replace('Group ', '')
     const fase = fase_tipo === 'grupos' && grupo ? `Grupo ${grupo}` : faseBase
 
-    // ID estável baseado em data + times (range 10000–89999)
     const partida = {
-      id: hashInt(`${m.date ?? ''}|${time1}|${time2}`, 10000, 80000),
+      id: hashPartidaId(`${m.date ?? ''}|${time1}|${time2}`),
       fase,
       fase_tipo,
       data_hora: m.date ? `${m.date}T${converterHora(m.time)}Z` : null,
