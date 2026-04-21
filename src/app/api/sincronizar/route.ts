@@ -100,8 +100,8 @@ async function seedDeOpenFootball(admin: ReturnType<typeof createAdminClient>) {
   for (const m of matches) {
     const time1 = m.team1
     const time2 = m.team2
-    if (!time1 || time1.startsWith('W') || time1.startsWith('L')) continue
-    if (!time2 || time2.startsWith('W') || time2.startsWith('L')) continue
+    if (!time1 || time1.startsWith('W') || time1.startsWith('L') || /^\d/.test(time1)) continue
+    if (!time2 || time2.startsWith('W') || time2.startsWith('L') || /^\d/.test(time2)) continue
 
     for (const nome of [time1, time2]) {
       const codigo = codigoDoNome(nome)
@@ -162,8 +162,8 @@ async function seedDeOpenFootball(admin: ReturnType<typeof createAdminClient>) {
   for (const m of matches) {
     const time1 = m.team1
     const time2 = m.team2
-    if (!time1 || !time2 || time1.startsWith('W') || time1.startsWith('L') ||
-        time2.startsWith('W') || time2.startsWith('L')) {
+    if (!time1 || !time2 || time1.startsWith('W') || time1.startsWith('L') || /^\d/.test(time1) ||
+        time2.startsWith('W') || time2.startsWith('L') || /^\d/.test(time2)) {
       // Fase eliminatória sem times definidos — inserir como "a definir"
       const { fase_tipo, fase } = mapRoundOpenFootball(m.round)
       if (fase_tipo === 'grupos') continue
