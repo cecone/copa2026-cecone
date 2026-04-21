@@ -107,7 +107,6 @@ async function seedDeOpenFootball(admin: ReturnType<typeof createAdminClient>) {
     }
   }
 
-  // Upsert seleções
   const selecoes = Array.from(timesMap.values()).map(t => ({
     id: t.id,
     nome: t.nome,
@@ -117,20 +116,23 @@ async function seedDeOpenFootball(admin: ReturnType<typeof createAdminClient>) {
     grupo: t.grupo,
   }))
 
-  const { error: errSelecoes } = await admin.from('selecoes').upsert(selecoes, { onConflict: 'id' })
-  if (errSelecoes) throw new Error(`Erro ao inserir seleções: ${errSelecoes.message}`)
-
-  // Montar mapa nome → id para FK
-  const nomeParaId = new Map(Array.from(timesMap.entries()).map(([nome, t]) => [nome, t.id]))
-
-  // Apagar todas as partidas do seed (IDs 10000–89999) que não foram corrigidas manualmente.
-  // Isso garante uma re-inserção limpa e elimina duplicatas de execuções anteriores.
+  // Apagar todas as partidas do seed antes de re-inserir (evita duplicatas por IDs antigos)
   await admin
     .from('partidas')
     .delete()
     .gte('id', 10000)
     .lte('id', 89999)
     .neq('corrigida_manualmente', true)
+
+  // Apagar seleções antigas do seed (IDs 1000–8999) antes de re-inserir com IDs estáveis
+  await admin.from('selecoes').delete().gte('id', 1000).lte('id', 8999)
+
+  // Inserir seleções com IDs estáveis
+  const { error: errSelecoes } = await admin.from('selecoes').insert(selecoes)
+  if (errSelecoes) throw new Error(`Erro ao inserir seleções: ${errSelecoes.message}`)
+
+  // Montar mapa nome → id para FK
+  const nomeParaId = new Map(Array.from(timesMap.entries()).map(([nome, t]) => [nome, t.id]))
 
   // Inserir partidas com IDs estáveis
   let partidasInseridas = 0
