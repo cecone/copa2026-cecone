@@ -195,7 +195,7 @@ async function seedDeOpenFootball(admin: ReturnType<typeof createAdminClient>) {
       id: hashPartidaId(`${m.date ?? ''}|${time1}|${time2}`),
       fase,
       fase_tipo,
-      data_hora: m.date ? `${m.date}T${converterHora(m.time)}Z` : null,
+      data_hora: m.date ? converterDataHora(m.date, m.time) : null,
       selecao_casa_id: casaId,
       selecao_fora_id: foraId,
       gols_casa: null,
