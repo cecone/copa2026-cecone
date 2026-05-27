@@ -42,8 +42,8 @@ export async function GET(req: NextRequest) {
     }
 
     if (tipo === 'vivo') {
-      await sincronizarVivo(admin)
-      return NextResponse.json({ ok: true, tipo: 'vivo' })
+      const resultado = await sincronizarVivo(admin)
+      return NextResponse.json({ ok: true, tipo: 'vivo', ...resultado })
     }
 
     if (tipo === 'partidas' || tipo === 'tudo') {
@@ -54,7 +54,9 @@ export async function GET(req: NextRequest) {
       await sincronizarClassificacao(admin)
     }
 
-    return NextResponse.json({ ok: true, tipo })
+    // Retorna uso atual do rate limit para diagnóstico
+    const { count, proximoEm } = await getRateState(admin)
+    return NextResponse.json({ ok: true, tipo, requisicoes_hoje: count, proximo_sync: proximoEm })
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err)
     console.error('[sincronizar]', msg)
@@ -260,18 +262,78 @@ async function seedClassificacaoInicial(
 }
 
 // ================================================================
+// Rate limit — persiste estado no Supabase (funções serverless são stateless)
+// Limite: 100 req/dia. Travamos em 90 para deixar margem.
+// ================================================================
+const LIMITE_DIARIO = 90
+const COOLDOWN_PADRAO_S = 10 * 60 // 10 minutos se a API não informar next_phase_in_seconds
+
+async function getRateState(admin: ReturnType<typeof createAdminClient>) {
+  const hoje = new Date().toISOString().slice(0, 10) // YYYY-MM-DD UTC
+  const { data } = await admin
+    .from('configuracoes')
+    .select('chave, valor')
+    .in('chave', ['wc_req_date', 'wc_req_count', 'wc_proximo_em'])
+
+  const estado = Object.fromEntries((data ?? []).map(r => [r.chave, r.valor]))
+  const count = estado.wc_req_date === hoje ? parseInt(estado.wc_req_count ?? '0') : 0
+  const proximoEm = estado.wc_proximo_em ? new Date(estado.wc_proximo_em) : null
+
+  return { hoje, count, proximoEm }
+}
+
+async function registrarRequisicao(
+  admin: ReturnType<typeof createAdminClient>,
+  hoje: string,
+  count: number,
+  nextPhaseSeconds?: number | null,
+) {
+  const cooldown = nextPhaseSeconds ?? COOLDOWN_PADRAO_S
+  const proximoEm = new Date(Date.now() + cooldown * 1000).toISOString()
+  await admin.from('configuracoes').upsert([
+    { chave: 'wc_req_date',  valor: hoje },
+    { chave: 'wc_req_count', valor: String(count + 1) },
+    { chave: 'wc_proximo_em', valor: proximoEm },
+  ], { onConflict: 'chave' })
+}
+
+// Retorna { permitido, count, proximoEm, motivo? }
+async function verificarRateLimit(admin: ReturnType<typeof createAdminClient>) {
+  const { hoje, count, proximoEm } = await getRateState(admin)
+
+  if (count >= LIMITE_DIARIO) {
+    return { permitido: false, hoje, count, proximoEm, motivo: `limite_diario (${count}/${LIMITE_DIARIO})` }
+  }
+  if (proximoEm && proximoEm > new Date()) {
+    const esperaS = Math.ceil((proximoEm.getTime() - Date.now()) / 1000)
+    return { permitido: false, hoje, count, proximoEm, motivo: `cooldown (${esperaS}s restantes)` }
+  }
+
+  return { permitido: true, hoje, count, proximoEm }
+}
+
+// ================================================================
 // WC2026 API — placares ao vivo
 // ================================================================
 async function sincronizarVivo(admin: ReturnType<typeof createAdminClient>) {
-  if (!process.env.WC2026_KEY) return // chave ainda não configurada
+  if (!process.env.WC2026_KEY) return
+
+  const limite = await verificarRateLimit(admin)
+  if (!limite.permitido) {
+    console.log(`[sincronizar/vivo] pulado — ${limite.motivo}`)
+    return { pulado: true, motivo: limite.motivo, requisicoes_hoje: limite.count }
+  }
 
   const res = await fetch(`${WC_BASE}/matches?status=live`, { headers: wcHeaders() })
   if (!res.ok) return
+
   const json = await res.json()
   const partidas: WC2026Match[] = Array.isArray(json) ? json : (json.data ?? [])
+  const nextPhaseSeconds: number | null = json.next_phase_in_seconds ?? null
+
+  await registrarRequisicao(admin, limite.hoje, limite.count, nextPhaseSeconds)
 
   for (const p of partidas) {
-    // Busca a partida pelo ID da WC2026 API
     await admin
       .from('partidas')
       .update({
@@ -283,18 +345,29 @@ async function sincronizarVivo(admin: ReturnType<typeof createAdminClient>) {
       .eq('id', p.id)
       .eq('corrigida_manualmente', false)
   }
+
+  return { pulado: false, requisicoes_hoje: limite.count + 1, proximo_em_s: nextPhaseSeconds }
 }
 
 async function sincronizarPartidas(admin: ReturnType<typeof createAdminClient>) {
   if (!process.env.WC2026_KEY) return
 
+  const limite = await verificarRateLimit(admin)
+  if (!limite.permitido) {
+    console.log(`[sincronizar/partidas] pulado — ${limite.motivo}`)
+    return
+  }
+
   const res = await fetch(`${WC_BASE}/matches`, { headers: wcHeaders() })
   if (!res.ok) throw new Error(`WC2026 API erro: ${res.status}`)
   const json = await res.json()
   const partidas: WC2026Match[] = Array.isArray(json) ? json : (json.data ?? [])
+  const nextPhaseSeconds: number | null = json.next_phase_in_seconds ?? null
+
+  await registrarRequisicao(admin, limite.hoje, limite.count, nextPhaseSeconds)
 
   for (const p of partidas) {
-    if (!p.home_team || !p.away_team) continue  // times ainda não definidos (fase eliminatória futura)
+    if (!p.home_team || !p.away_team) continue
 
     const casaCodigo = codigoDoNome(p.home_team)
     const foraCodigo = codigoDoNome(p.away_team)
@@ -305,7 +378,6 @@ async function sincronizarPartidas(admin: ReturnType<typeof createAdminClient>) 
 
     const { fase_tipo, fase: faseBase } = mapRoundWC2026(p.round, p.group_name)
     const fase = faseBase
-
     const statusMapeado = mapStatusWC2026(p.status)
 
     await admin.from('partidas').upsert({
@@ -327,10 +399,19 @@ async function sincronizarPartidas(admin: ReturnType<typeof createAdminClient>) 
 async function sincronizarClassificacao(admin: ReturnType<typeof createAdminClient>) {
   if (!process.env.WC2026_KEY) return
 
+  const limite = await verificarRateLimit(admin)
+  if (!limite.permitido) {
+    console.log(`[sincronizar/classificacao] pulado — ${limite.motivo}`)
+    return
+  }
+
   const res = await fetch(`${WC_BASE}/standings`, { headers: wcHeaders() })
   if (!res.ok) return
   const json = await res.json()
   const grupos: WC2026Standing[] = Array.isArray(json) ? json : (json.data ?? [])
+  const nextPhaseSeconds: number | null = json.next_phase_in_seconds ?? null
+
+  await registrarRequisicao(admin, limite.hoje, limite.count, nextPhaseSeconds)
 
   for (const entrada of grupos) {
     const codigo = codigoDoNome(entrada.team)

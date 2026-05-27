@@ -4,6 +4,26 @@
 -- ============================================================
 
 -- --------------------------------------------------------
+-- Configurações internas (rate limit, estado de sync)
+-- Acesso exclusivo via service_role (createAdminClient) — sem acesso público
+-- --------------------------------------------------------
+CREATE TABLE IF NOT EXISTS configuracoes (
+  chave TEXT PRIMARY KEY,
+  valor TEXT
+);
+
+ALTER TABLE configuracoes ENABLE ROW LEVEL SECURITY;
+-- Nenhuma policy: acesso bloqueado para anon/authenticated.
+-- Service_role (createAdminClient) bypassa RLS — único acesso permitido.
+
+-- --------------------------------------------------------
+-- Permissões de acesso ao schema (necessário a partir de 30/05/2026)
+-- Sem isso, novas tabelas ficam invisíveis para o supabase-js / PostgREST
+-- --------------------------------------------------------
+GRANT USAGE ON SCHEMA public TO anon, authenticated;
+GRANT USAGE ON SCHEMA public TO service_role;
+
+-- --------------------------------------------------------
 -- Seleções (times participantes)
 -- --------------------------------------------------------
 CREATE TABLE IF NOT EXISTS selecoes (
@@ -14,6 +34,8 @@ CREATE TABLE IF NOT EXISTS selecoes (
   bandeira_url TEXT   DEFAULT '',    -- URL da imagem (usado pelo admin)
   grupo       TEXT                   -- 'A' a 'L' (fase de grupos)
 );
+
+GRANT SELECT ON TABLE selecoes TO anon, authenticated;
 
 ALTER TABLE selecoes ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Leitura pública de seleções"
@@ -39,6 +61,8 @@ CREATE TABLE IF NOT EXISTS partidas (
   corrigida_manualmente BOOLEAN NOT NULL DEFAULT FALSE
 );
 
+GRANT SELECT ON TABLE partidas TO anon, authenticated;
+
 ALTER TABLE partidas ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Leitura pública de partidas"
   ON partidas FOR SELECT USING (true);
@@ -60,6 +84,8 @@ CREATE TABLE IF NOT EXISTS classificacao_grupos (
   pontos         INTEGER NOT NULL DEFAULT 0
 );
 
+GRANT SELECT ON TABLE classificacao_grupos TO anon, authenticated;
+
 ALTER TABLE classificacao_grupos ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Leitura pública de classificação"
   ON classificacao_grupos FOR SELECT USING (true);
@@ -73,6 +99,8 @@ CREATE TABLE IF NOT EXISTS grupos_bolao (
   codigo_convite  TEXT    NOT NULL UNIQUE,
   criado_por      UUID    NOT NULL REFERENCES auth.users(id)
 );
+
+GRANT SELECT, INSERT ON TABLE grupos_bolao TO authenticated;
 
 ALTER TABLE grupos_bolao ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Membro lê seu grupo"
@@ -90,6 +118,8 @@ CREATE TABLE IF NOT EXISTS membros_grupo (
   user_id   UUID    NOT NULL REFERENCES auth.users(id),
   UNIQUE(grupo_id, user_id)
 );
+
+GRANT SELECT, INSERT ON TABLE membros_grupo TO authenticated;
 
 ALTER TABLE membros_grupo ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Membro vê membros do seu grupo"
@@ -113,6 +143,8 @@ CREATE TABLE IF NOT EXISTS palpites (
   UNIQUE(user_id, grupo_id, partida_id)
 );
 
+GRANT SELECT, INSERT, UPDATE ON TABLE palpites TO authenticated;
+
 ALTER TABLE palpites ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Usuário vê palpites do seu grupo"
   ON palpites FOR SELECT
@@ -135,6 +167,8 @@ CREATE TABLE IF NOT EXISTS palpites_especiais (
   artilheiro_id INTEGER REFERENCES selecoes(id), -- simplificado: seleção do artilheiro
   UNIQUE(user_id, grupo_id)
 );
+
+GRANT SELECT, INSERT, UPDATE ON TABLE palpites_especiais TO authenticated;
 
 ALTER TABLE palpites_especiais ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Usuário vê palpites especiais do seu grupo"
