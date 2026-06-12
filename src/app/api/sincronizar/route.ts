@@ -356,8 +356,8 @@ async function sincronizarVivo(admin: ReturnType<typeof createAdminClient>) {
   for (const p of partidas) {
     if (!p.home_team || !p.away_team) continue
 
-    const casaCodigo = codigoDoNome(p.home_team)
-    const foraCodigo = codigoDoNome(p.away_team)
+    const casaCodigo = p.home_team_code ?? codigoDoNome(p.home_team)
+    const foraCodigo = p.away_team_code ?? codigoDoNome(p.away_team)
 
     const { data: casaRows } = await admin.from('selecoes').select('id').eq('codigo', casaCodigo)
     const { data: foraRows } = await admin.from('selecoes').select('id').eq('codigo', foraCodigo)
@@ -495,8 +495,8 @@ async function sincronizarPartidas(admin: ReturnType<typeof createAdminClient>) 
   for (const p of partidas) {
     if (!p.home_team || !p.away_team) continue
 
-    const casaCodigo = codigoDoNome(p.home_team)
-    const foraCodigo = codigoDoNome(p.away_team)
+    const casaCodigo = p.home_team_code ?? codigoDoNome(p.home_team)
+    const foraCodigo = p.away_team_code ?? codigoDoNome(p.away_team)
 
     const { data: casaRow } = await admin.from('selecoes').select('id').eq('codigo', casaCodigo).single()
     const { data: foraRow } = await admin.from('selecoes').select('id').eq('codigo', foraCodigo).single()
@@ -596,7 +596,9 @@ type WC2026Match = {
   round: string
   group_name?: string
   home_team: string
+  home_team_code?: string | null
   away_team: string
+  away_team_code?: string | null
   kickoff_utc: string
   status: string
   home_score?: number | null
