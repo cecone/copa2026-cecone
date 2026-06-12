@@ -33,6 +33,23 @@ export async function GET(req: NextRequest) {
   const admin = createAdminClient()
 
   try {
+    if (tipo === 'debug') {
+      const urls = [
+        `${WC_BASE}/matches?status=live`,
+        `${WC_BASE}/matches?status=finished`,
+        `${WC_BASE}/matches/today`,
+        `${WC_BASE}/matches`,
+      ]
+      const resultados: Record<string, unknown> = {}
+      for (const url of urls) {
+        const res = await fetch(url, { headers: wcHeaders() })
+        const texto = await res.text()
+        try { resultados[url] = { status: res.status, body: JSON.parse(texto) } }
+        catch { resultados[url] = { status: res.status, body: texto } }
+      }
+      return NextResponse.json(resultados)
+    }
+
     if (tipo === 'sementes') {
       // Seed inicial a partir do openfootball (sem chave de API)
       const resultado = await seedDeOpenFootball(admin)
@@ -324,29 +341,138 @@ async function sincronizarVivo(admin: ReturnType<typeof createAdminClient>) {
     return { pulado: true, motivo: limite.motivo, requisicoes_hoje: limite.count }
   }
 
-  const res = await fetch(`${WC_BASE}/matches?status=live`, { headers: wcHeaders() })
+  const res = await fetch(`${WC_BASE}/matches`, { headers: wcHeaders() })
   if (!res.ok) return
 
   const json = await res.json()
-  const partidas: WC2026Match[] = Array.isArray(json) ? json : (json.data ?? [])
+  const todasPartidas: WC2026Match[] = Array.isArray(json) ? json : (json.data ?? [])
   const nextPhaseSeconds: number | null = json.next_phase_in_seconds ?? null
+
+  // Atualizar apenas partidas ao vivo ou recém-encerradas
+  const partidas = todasPartidas.filter(p => p.status === 'live' || p.status === 'finished' || p.status === 'completed')
 
   await registrarRequisicao(admin, limite.hoje, limite.count, nextPhaseSeconds)
 
   for (const p of partidas) {
+    if (!p.home_team || !p.away_team) continue
+
+    const casaCodigo = codigoDoNome(p.home_team)
+    const foraCodigo = codigoDoNome(p.away_team)
+
+    const { data: casaRows } = await admin.from('selecoes').select('id').eq('codigo', casaCodigo)
+    const { data: foraRows } = await admin.from('selecoes').select('id').eq('codigo', foraCodigo)
+    if (!casaRows?.length || !foraRows?.length) continue
+
+    const casaIds = casaRows.map(r => r.id)
+    const foraIds = foraRows.map(r => r.id)
+
     await admin
       .from('partidas')
       .update({
         gols_casa: p.home_score ?? null,
         gols_fora: p.away_score ?? null,
-        status: 'ao_vivo',
+        status: mapStatusWC2026(p.status),
         minuto: p.minute ?? null,
       })
-      .eq('id', p.id)
+      .in('selecao_casa_id', casaIds)
+      .in('selecao_fora_id', foraIds)
       .eq('corrigida_manualmente', false)
   }
 
+  // Recalcular classificação a partir das partidas encerradas no banco (sem custo de API)
+  await recalcularClassificacao(admin)
+
   return { pulado: false, requisicoes_hoje: limite.count + 1, proximo_em_s: nextPhaseSeconds }
+}
+
+// ================================================================
+// Recalcula classificação_grupos a partir das partidas encerradas no banco.
+// Não consome cota da API externa.
+// ================================================================
+async function recalcularClassificacao(admin: ReturnType<typeof createAdminClient>) {
+  const { data: partidas } = await admin
+    .from('partidas')
+    .select('fase, selecao_casa_id, selecao_fora_id, gols_casa, gols_fora')
+    .eq('fase_tipo', 'grupos')
+    .eq('status', 'encerrada')
+
+  if (!partidas?.length) return
+
+  // Buscar todas as seleções dos grupos para montar o mapa id→grupo
+  const { data: selecoes } = await admin
+    .from('selecoes')
+    .select('id, grupo')
+    .not('grupo', 'is', null)
+
+  // Como há 3 ids por seleção, usar o id que está nas partidas como chave
+  // O grupo vem da tabela selecoes — pegar o primeiro valor encontrado por id
+  const grupoPorid = new Map<number, string>()
+  for (const s of selecoes ?? []) {
+    if (!grupoPorid.has(s.id)) grupoPorid.set(s.id, s.grupo)
+  }
+
+  // Acumular stats por selecao_id
+  type Stats = { grupo: string; jogos: number; vitorias: number; empates: number; derrotas: number; gm: number; gs: number }
+  const stats = new Map<number, Stats>()
+
+  function get(id: number, grupo: string): Stats {
+    if (!stats.has(id)) stats.set(id, { grupo, jogos: 0, vitorias: 0, empates: 0, derrotas: 0, gm: 0, gs: 0 })
+    return stats.get(id)!
+  }
+
+  for (const p of partidas) {
+    if (p.gols_casa === null || p.gols_fora === null) continue
+    const gc = p.gols_casa, gf = p.gols_fora
+    const grupoCasa = grupoPorid.get(p.selecao_casa_id) ?? ''
+    const grupoFora = grupoPorid.get(p.selecao_fora_id) ?? ''
+
+    const casa = get(p.selecao_casa_id, grupoCasa)
+    const fora = get(p.selecao_fora_id, grupoFora)
+
+    casa.jogos++; fora.jogos++
+    casa.gm += gc; casa.gs += gf
+    fora.gm += gf; fora.gs += gc
+
+    if (gc > gf)      { casa.vitorias++; fora.derrotas++ }
+    else if (gc < gf) { fora.vitorias++; casa.derrotas++ }
+    else              { casa.empates++;  fora.empates++ }
+  }
+
+  // Calcular posição por grupo
+  const porGrupo = new Map<string, { id: number; s: Stats }[]>()
+  for (const [id, s] of stats) {
+    if (!porGrupo.has(s.grupo)) porGrupo.set(s.grupo, [])
+    porGrupo.get(s.grupo)!.push({ id, s })
+  }
+
+  const linhas: { selecao_id: number; grupo: string; posicao: number; jogos: number; vitorias: number; empates: number; derrotas: number; gols_marcados: number; gols_sofridos: number; saldo: number; pontos: number }[] = []
+  for (const times of porGrupo.values()) {
+    times.sort((a, b) => {
+      const ptA = a.s.vitorias * 3 + a.s.empates
+      const ptB = b.s.vitorias * 3 + b.s.empates
+      if (ptB !== ptA) return ptB - ptA
+      return (b.s.gm - b.s.gs) - (a.s.gm - a.s.gs)
+    })
+    times.forEach(({ id, s }, i) => {
+      linhas.push({
+        selecao_id: id,
+        grupo: s.grupo,
+        posicao: i + 1,
+        jogos: s.jogos,
+        vitorias: s.vitorias,
+        empates: s.empates,
+        derrotas: s.derrotas,
+        gols_marcados: s.gm,
+        gols_sofridos: s.gs,
+        saldo: s.gm - s.gs,
+        pontos: s.vitorias * 3 + s.empates,
+      })
+    })
+  }
+
+  if (linhas.length > 0) {
+    await admin.from('classificacao_grupos').upsert(linhas, { onConflict: 'selecao_id' })
+  }
 }
 
 async function sincronizarPartidas(admin: ReturnType<typeof createAdminClient>) {

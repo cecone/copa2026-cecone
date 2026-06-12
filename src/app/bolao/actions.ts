@@ -87,8 +87,7 @@ export async function salvarPalpite(
 
 export async function salvarPalpiteEspecial(
   grupoId: string,
-  campeaoId: number,
-  artilheiroId: number
+  campeaoId: number
 ) {
   const user = await getUser()
   if (!user) return { erro: 'Você precisa estar logado.' }
@@ -96,7 +95,7 @@ export async function salvarPalpiteEspecial(
   const admin = createAdminClient()
 
   const { error } = await admin.from('palpites_especiais').upsert(
-    { user_id: user.id, grupo_id: grupoId, campeao_id: campeaoId, artilheiro_id: artilheiroId },
+    { user_id: user.id, grupo_id: grupoId, campeao_id: campeaoId },
     { onConflict: 'user_id,grupo_id' }
   )
 

@@ -9,24 +9,22 @@ type Selecao = { id: number; nome: string; codigo: string; bandeira: string }
 type Props = {
   grupoId: string
   selecoes: Selecao[]
-  palpiteAtual?: { campeao_id: number | null; artilheiro_id: number | null } | null
+  palpiteAtual?: { campeao_id: number | null } | null
 }
 
 export default function FormPalpiteEspecial({ grupoId, selecoes, palpiteAtual }: Props) {
   const [campeaoId, setCampeaoId] = useState(palpiteAtual?.campeao_id?.toString() ?? '')
-  const [artilheiroId, setArtilheiroId] = useState(palpiteAtual?.artilheiro_id?.toString() ?? '')
   const [salvando, setSalvando] = useState(false)
   const [salvo, setSalvo] = useState(false)
   const [erro, setErro] = useState('')
 
   const campeaoSelecionado = selecoes.find(s => s.id.toString() === campeaoId)
-  const artilheiroSelecionado = selecoes.find(s => s.id.toString() === artilheiroId)
 
   async function handleSalvar() {
-    if (!campeaoId || !artilheiroId) return
+    if (!campeaoId) return
     setSalvando(true)
     setErro('')
-    const result = await salvarPalpiteEspecial(grupoId, Number(campeaoId), Number(artilheiroId))
+    const result = await salvarPalpiteEspecial(grupoId, Number(campeaoId))
     if (result.erro) {
       setErro(result.erro)
     } else {
@@ -78,41 +76,10 @@ export default function FormPalpiteEspecial({ grupoId, selecoes, palpiteAtual }:
           </div>
         </div>
 
-        {/* Artilheira */}
-        <div>
-          <label className="text-xs text-white/40 uppercase tracking-wider font-semibold block mb-2">
-            Seleção Artilheira
-          </label>
-          <div className="flex items-center gap-3">
-            <div className="shrink-0 w-8 h-6 flex items-center justify-center">
-              {artilheiroSelecionado ? (
-                <Bandeira
-                  codigo={artilheiroSelecionado.codigo}
-                  emoji={artilheiroSelecionado.bandeira}
-                  nome={artilheiroSelecionado.nome}
-                  tamanho="md"
-                />
-              ) : (
-                <span className="text-white/20 text-xl">?</span>
-              )}
-            </div>
-            <select
-              value={artilheiroId}
-              onChange={e => setArtilheiroId(e.target.value)}
-              className="flex-1 bg-[var(--background)] border border-white/20 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-[var(--copa-gold)] transition-colors appearance-none cursor-pointer"
-            >
-              <option value="">Escolha uma seleção…</option>
-              {selecoes.map(s => (
-                <option key={s.id} value={s.id}>{s.nome}</option>
-              ))}
-            </select>
-          </div>
-        </div>
-
         {/* Botão */}
         <button
           onClick={handleSalvar}
-          disabled={salvando || !campeaoId || !artilheiroId}
+          disabled={salvando || !campeaoId}
           className={`w-full py-2.5 rounded-lg font-bold text-sm transition-all ${
             salvo
               ? 'bg-green-600 text-white'

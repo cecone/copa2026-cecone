@@ -121,17 +121,21 @@ export default async function GrupoBolaoPage({ params }: Props) {
     })
   )
 
-  // Buscar seleções para palpites especiais
-  const { data: selecoes } = await admin
+  // Buscar seleções para palpites especiais (deduplicadas por codigo)
+  const { data: selecoesRaw } = await admin
     .from('selecoes')
     .select('id, nome, codigo, bandeira')
     .not('grupo', 'is', null)
     .order('nome', { ascending: true })
 
+  const selecoes = Array.from(
+    new Map((selecoesRaw ?? []).map(s => [s.codigo, s])).values()
+  )
+
   // Buscar palpite especial do usuário neste grupo
   const { data: palpiteEspecial } = await admin
     .from('palpites_especiais')
-    .select('campeao_id, artilheiro_id')
+    .select('campeao_id')
     .eq('grupo_id', id)
     .eq('user_id', user.id)
     .single()
