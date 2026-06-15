@@ -39,6 +39,8 @@ export async function GET(req: NextRequest) {
         `${WC_BASE}/matches?status=finished`,
         `${WC_BASE}/matches/today`,
         `${WC_BASE}/matches`,
+        `${WC_BASE}/matches/847767/stats`,
+        `${WC_BASE}/matches/62733/stats`,
       ]
       const resultados: Record<string, unknown> = {}
       for (const url of urls) {
@@ -599,7 +601,7 @@ async function sincronizarStats(admin: ReturnType<typeof createAdminClient>) {
     }
 
     const res = await fetch(`${WC_BASE}/matches/${partidaId}/stats`, { headers: wcHeaders() })
-    await registrarRequisicao(admin, limite.hoje, limite.count, null)
+    await registrarRequisicao(admin, limite.hoje, limite.count, 2) // 2s entre stats, sem travar o loop
     if (!res.ok) {
       console.log(`[sincronizar/stats] jogo ${partidaId}: HTTP ${res.status}`)
       continue
