@@ -619,6 +619,10 @@ async function sincronizarStats(admin: ReturnType<typeof createAdminClient>) {
   const { data: selecoes } = await admin.from('selecoes').select('id, codigo').in('id', selIds)
   const codigoPorId = new Map((selecoes ?? []).map(s => [s.id, s.codigo]))
 
+  // Buscar estado atual do rate limit uma vez só (não verificar cooldown dentro do loop,
+  // pois registrarRequisicao define cooldown de 2s que bloquearia a próxima iteração)
+  let { hoje: rateHoje, count: rateCount } = await getRateState(admin)
+
   let salvos = 0
   for (const partida of pendentes) {
     const casaCodigo = codigoPorId.get(partida.selecao_casa_id)
@@ -631,14 +635,15 @@ async function sincronizarStats(admin: ReturnType<typeof createAdminClient>) {
       continue
     }
 
-    const limite = await verificarRateLimit(admin)
-    if (!limite.permitido) {
-      console.log(`[sincronizar/stats] parou — ${limite.motivo}`)
+    // Verificar apenas o limite diário, não o cooldown (que é para intervalos entre crons)
+    if (rateCount >= LIMITE_DIARIO) {
+      console.log(`[sincronizar/stats] parou — limite diário (${rateCount}/${LIMITE_DIARIO})`)
       break
     }
 
     const res = await fetch(`${WC_BASE}/matches/${apiId}/stats`, { headers: wcHeaders() })
-    await registrarRequisicao(admin, limite.hoje, limite.count, 2)
+    await registrarRequisicao(admin, rateHoje, rateCount, 2)
+    rateCount++
     if (!res.ok) {
       console.log(`[sincronizar/stats] jogo ${apiId} (${casaCodigo} vs ${foraCodigo}): HTTP ${res.status}`)
       continue
