@@ -49,7 +49,6 @@ export default async function GrupoBolaoPage({ params }: Props) {
 
   if (!user) redirect('/')
 
-  // Buscar grupo e verificar associação via admin (evita problema de RLS no momento da criação)
   const admin = createAdminClient()
 
   const { data: grupo } = await admin
@@ -60,7 +59,6 @@ export default async function GrupoBolaoPage({ params }: Props) {
 
   if (!grupo) notFound()
 
-  // Verificar se é membro (admin client, sem dependência de RLS)
   const { data: membro } = await admin
     .from('membros_grupo')
     .select('id')
@@ -70,13 +68,11 @@ export default async function GrupoBolaoPage({ params }: Props) {
 
   if (!membro) redirect('/bolao')
 
-  // Buscar membros do grupo
   const { data: membros } = await admin
     .from('membros_grupo')
     .select('user_id')
     .eq('grupo_id', id)
 
-  // Buscar partidas da fase de grupos do Supabase
   const { data: partidasData } = await admin
     .from('partidas')
     .select(`
@@ -89,7 +85,6 @@ export default async function GrupoBolaoPage({ params }: Props) {
 
   const partidas = (partidasData ?? []).map(r => rowToPartida(r as unknown as PartidaRow))
 
-  // Buscar palpites do usuário neste grupo
   const { data: meusPalpites } = await admin
     .from('palpites')
     .select('partida_id, gols_casa, gols_fora')
@@ -100,7 +95,6 @@ export default async function GrupoBolaoPage({ params }: Props) {
     (meusPalpites ?? []).map(p => [p.partida_id, p])
   )
 
-  // Buscar todos os palpites para o ranking
   const { data: todosPalpites } = await admin
     .from('palpites')
     .select('user_id, partida_id, gols_casa, gols_fora')
@@ -108,7 +102,6 @@ export default async function GrupoBolaoPage({ params }: Props) {
 
   const ranking = calcularRanking(membros ?? [], todosPalpites ?? [], partidas)
 
-  // Buscar nomes dos membros do grupo via admin
   const userIds = (membros ?? []).map(m => m.user_id)
   const nomesPorId = new Map<string, string>()
   await Promise.all(
@@ -121,7 +114,6 @@ export default async function GrupoBolaoPage({ params }: Props) {
     })
   )
 
-  // Buscar seleções para palpites especiais (deduplicadas por codigo)
   const { data: selecoesRaw } = await admin
     .from('selecoes')
     .select('id, nome, codigo, bandeira')
@@ -132,7 +124,6 @@ export default async function GrupoBolaoPage({ params }: Props) {
     new Map((selecoesRaw ?? []).map(s => [s.codigo, s])).values()
   )
 
-  // Buscar palpite especial do usuário neste grupo
   const { data: palpiteEspecial } = await admin
     .from('palpites_especiais')
     .select('campeao_id')
@@ -141,53 +132,67 @@ export default async function GrupoBolaoPage({ params }: Props) {
     .single()
 
   return (
-    <div className="min-h-screen p-4 sm:p-8">
-      <div className="max-w-lg mx-auto">
+    <div className="min-h-screen px-4 pb-16 pt-6 sm:px-8">
+      <div className="mx-auto max-w-lg">
         {/* Topo */}
-        <div className="flex items-center justify-between mb-8">
-          <Link href="/bolao" className="text-white/40 hover:text-white text-sm transition-colors">
-            ← Bolão
+        <header className="mb-8 flex items-center justify-between">
+          <Link href="/bolao" className="inline-flex items-center gap-2 text-sm text-[var(--mist)] transition-colors hover:text-[var(--chalk)]">
+            <span aria-hidden>←</span> Bolão
           </Link>
           <LogoApp horizontal />
-        </div>
+        </header>
 
-        {/* Nome do grupo */}
-        <div className="mb-6">
-          <h2 className="text-2xl font-bold text-white">{grupo.nome}</h2>
-          <div className="flex items-center gap-2 mt-1">
-            <span className="text-white/30 text-sm">Código de convite:</span>
-            <span className="font-mono font-bold text-[var(--copa-gold)] tracking-widest bg-[var(--surface)] px-2 py-0.5 rounded text-sm">
+        {/* Nome do grupo + código */}
+        <div className="mb-7">
+          <p className="mb-1 text-[11px] uppercase tracking-[0.18em] text-[var(--mist)]">Bolão</p>
+          <h1 className="font-display text-3xl font-bold uppercase text-[var(--chalk)]">{grupo.nome}</h1>
+          <div className="mt-2 flex items-center gap-2">
+            <span className="text-sm text-[var(--mist)]">Código de convite</span>
+            <span className="rounded-md bg-[var(--turf-2)] px-2 py-0.5 font-mono text-sm font-bold tracking-widest text-[var(--copa-gold)]">
               {grupo.codigo_convite}
             </span>
           </div>
         </div>
 
         {/* Ranking */}
-        <div className="bg-[var(--surface)] rounded-xl border border-white/10 mb-8 overflow-hidden">
-          <div className="px-4 py-3 border-b border-white/10">
-            <h3 className="text-sm font-bold text-white/70 uppercase tracking-wider">Ranking</h3>
+        <div className="mb-8 overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--turf)]">
+          <div className="border-b border-[var(--line)] px-5 py-3">
+            <h2 className="font-display text-base font-bold uppercase tracking-wide text-[var(--chalk)]">Ranking</h2>
           </div>
           {ranking.length === 0 ? (
-            <p className="text-white/30 text-sm p-4">Nenhum palpite registrado ainda.</p>
+            <p className="p-5 text-sm text-[var(--mist)]">Nenhum palpite registrado ainda.</p>
           ) : (
-            ranking.map((r, i) => (
-              <div
-                key={r.userId}
-                className={`flex items-center justify-between px-4 py-3 border-b border-white/5 last:border-0 ${r.userId === user.id ? 'bg-[var(--copa-blue)]/10' : ''}`}
-              >
-                <div className="flex items-center gap-3">
-                  <span className={`text-sm font-bold w-5 ${i === 0 ? 'text-[var(--copa-gold)]' : 'text-white/30'}`}>
-                    {i + 1}
-                  </span>
-                  <span className="text-sm text-white/70">
-                    {r.userId === user.id
-                      ? `${user.user_metadata.full_name ?? nomesPorId.get(r.userId) ?? 'Você'} (você)`
-                      : nomesPorId.get(r.userId) ?? 'Participante'}
+            ranking.map((r, i) => {
+              const euMesmo = r.userId === user.id
+              const podio = i < 3
+              const selo = i === 0
+                ? 'bg-[var(--copa-gold)] text-[#0A130F]'
+                : podio
+                ? 'border border-[var(--copa-gold)] text-[var(--copa-gold)]'
+                : 'text-[var(--mist)]'
+              return (
+                <div
+                  key={r.userId}
+                  className={`relative flex items-center justify-between border-t border-[var(--line)] px-5 py-3 first:border-t-0 ${euMesmo ? 'bg-[var(--copa-blue)]/10' : ''}`}
+                >
+                  {euMesmo && <span aria-hidden className="absolute left-0 top-0 h-full w-[3px] bg-[var(--copa-blue)]" />}
+                  <div className="flex items-center gap-3">
+                    <span className={`grid h-6 w-6 place-items-center rounded-md font-display text-sm font-bold ${selo}`}>
+                      {i + 1}
+                    </span>
+                    <span className={`text-sm ${euMesmo ? 'font-semibold text-[var(--chalk)]' : 'text-[var(--mist)]'}`}>
+                      {euMesmo
+                        ? `${user.user_metadata.full_name ?? nomesPorId.get(r.userId) ?? 'Você'} (você)`
+                        : nomesPorId.get(r.userId) ?? 'Participante'}
+                    </span>
+                  </div>
+                  <span className="font-display text-lg font-bold text-[var(--chalk)]">
+                    <span className="tnum">{r.pontos}</span>
+                    <span className="ml-1 text-xs font-medium text-[var(--mist)]">pts</span>
                   </span>
                 </div>
-                <span className="font-bold text-white">{r.pontos} pts</span>
-              </div>
-            ))
+              )
+            })
           )}
         </div>
 
@@ -199,9 +204,9 @@ export default async function GrupoBolaoPage({ params }: Props) {
         />
 
         {/* Palpites */}
-        <h3 className="text-lg font-bold text-white mb-4">Seus Palpites</h3>
+        <h2 className="mb-4 font-display text-xl font-bold uppercase text-[var(--chalk)]">Seus palpites</h2>
         {partidas.length === 0 ? (
-          <p className="text-white/40 text-sm">Os jogos ainda não foram carregados.</p>
+          <p className="text-sm text-[var(--mist)]">Os jogos ainda não foram carregados.</p>
         ) : (
           <div className="flex flex-col gap-3">
             {partidas.map(partida => (

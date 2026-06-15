@@ -98,27 +98,30 @@ export default function ChaveamentoPage() {
     }, {} as Record<FaseEliminatoria, PartidaEliminatoria[]>)
 
   return (
-    <div className="min-h-screen p-4 sm:p-8">
-      <div className="max-w-2xl mx-auto">
-        <div className="flex items-center justify-between mb-8">
-          <Link href="/" className="text-white/40 hover:text-white text-sm transition-colors">
-            ← Início
+    <div className="min-h-screen px-4 pb-16 pt-6 sm:px-8">
+      <div className="mx-auto max-w-2xl">
+        <header className="mb-8 flex items-center justify-between">
+          <Link href="/" className="inline-flex items-center gap-2 text-sm text-[var(--mist)] transition-colors hover:text-[var(--chalk)]">
+            <span aria-hidden>←</span> Início
           </Link>
           <LogoApp horizontal />
+        </header>
+
+        <div className="mb-6">
+          <p className="mb-1 text-[11px] uppercase tracking-[0.18em] text-[var(--mist)]">Copa do Mundo 2026</p>
+          <h1 className="font-display text-4xl font-bold uppercase text-[var(--chalk)]">Mata-mata</h1>
         </div>
 
-        <h2 className="text-2xl font-bold text-white mb-6">Fase Eliminatória</h2>
-
         {/* Filtro de fases */}
-        <div className="flex gap-2 overflow-x-auto pb-2 mb-8 scrollbar-none">
+        <div className="scrollbar-none mb-8 flex gap-2 overflow-x-auto pb-2">
           {fases.map(f => (
             <button
               key={f.id}
               onClick={() => setFaseSelecionada(f.id)}
-              className={`whitespace-nowrap px-4 py-1.5 rounded-full text-sm font-semibold transition-all ${
+              className={`whitespace-nowrap rounded-full px-4 py-1.5 text-sm font-semibold transition-colors ${
                 faseSelecionada === f.id
-                  ? 'bg-[var(--copa-gold)] text-black'
-                  : 'bg-[var(--surface)] text-white/50 border border-white/10 hover:border-white/30'
+                  ? 'bg-[var(--copa-gold)] text-[#0A130F]'
+                  : 'border border-[var(--line)] bg-[var(--turf)] text-[var(--mist)] hover:border-[var(--mist)]'
               }`}
             >
               {f.label}
@@ -127,9 +130,13 @@ export default function ChaveamentoPage() {
         </div>
 
         {partidas.length === 0 && (
-          <p className="text-white/40 text-center py-16">
-            A fase eliminatória ainda não foi carregada.
-          </p>
+          <div className="rounded-2xl border border-[var(--line)] bg-[var(--turf)] py-16 text-center">
+            <p className="mb-3 text-3xl">🏆</p>
+            <p className="font-display text-xl uppercase text-[var(--chalk)]">Mata-mata a caminho</p>
+            <p className="mx-auto mt-1 max-w-xs text-sm text-[var(--mist)]">
+              Os confrontos aparecem aqui quando a fase de grupos terminar.
+            </p>
+          </div>
         )}
 
         {/* Partidas por fase */}
@@ -139,11 +146,11 @@ export default function ChaveamentoPage() {
           return (
             <div key={fase} className="mb-8">
               {faseSelecionada === 'todas' && (
-                <h3 className="text-sm text-white/40 font-semibold uppercase tracking-wider mb-3">
+                <h2 className="mb-3 font-display text-sm font-bold uppercase tracking-wider text-[var(--mist)]">
                   {labelFase[fase]}
-                </h3>
+                </h2>
               )}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 {items.map(p => <CardEliminatoria key={p.id} partida={p} />)}
               </div>
             </div>
