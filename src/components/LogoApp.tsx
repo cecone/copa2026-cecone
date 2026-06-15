@@ -14,7 +14,9 @@ const TAMANHOS: Record<Tamanho, string> = {
   lg: 'w-20 h-20',
 }
 
-function BolaSvg({ tamanho = 'md' }: { tamanho?: Tamanho }) {
+// Roundel: círculo central do campo — disco de gramado, aro dourado,
+// linha de meio-campo, círculo central e marca do centro.
+function RoundelSvg({ tamanho = 'md' }: { tamanho?: Tamanho }) {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -22,34 +24,10 @@ function BolaSvg({ tamanho = 'md' }: { tamanho?: Tamanho }) {
       className={TAMANHOS[tamanho]}
       aria-hidden="true"
     >
-      <defs>
-        <radialGradient id="ballGlow" cx="38%" cy="35%" r="55%">
-          <stop offset="0%" stopColor="#3E74FF" />
-          <stop offset="100%" stopColor="#0B2A99" />
-        </radialGradient>
-      </defs>
-      <circle cx="40" cy="40" r="38" fill="url(#ballGlow)" stroke="#F4B740" strokeWidth="3" />
-      <line x1="40" y1="14" x2="62" y2="27" stroke="#F4B740" strokeWidth="1.5" opacity="0.45" />
-      <line x1="62" y1="27" x2="54" y2="54" stroke="#F4B740" strokeWidth="1.5" opacity="0.45" />
-      <line x1="54" y1="54" x2="26" y2="54" stroke="#F4B740" strokeWidth="1.5" opacity="0.45" />
-      <line x1="26" y1="54" x2="18" y2="27" stroke="#F4B740" strokeWidth="1.5" opacity="0.45" />
-      <line x1="18" y1="27" x2="40" y2="14" stroke="#F4B740" strokeWidth="1.5" opacity="0.45" />
-      <circle cx="40" cy="14" r="3" fill="#F4B740" />
-      <circle cx="62" cy="27" r="3" fill="#F4B740" />
-      <circle cx="54" cy="54" r="3" fill="#F4B740" />
-      <circle cx="26" cy="54" r="3" fill="#F4B740" />
-      <circle cx="18" cy="27" r="3" fill="#F4B740" />
-      <text
-        x="40" y="51"
-        textAnchor="middle"
-        fill="#F4B740"
-        fontSize="27"
-        fontWeight="700"
-        fontFamily="'Saira Condensed', Arial, sans-serif"
-        letterSpacing="0"
-      >
-        26
-      </text>
+      <circle cx="40" cy="40" r="37" fill="#0E2A1C" stroke="#F4B740" strokeWidth="3.5" />
+      <line x1="40" y1="8" x2="40" y2="72" stroke="#F4B740" strokeWidth="2.4" opacity="0.95" />
+      <circle cx="40" cy="40" r="14" fill="none" stroke="#F4B740" strokeWidth="3" />
+      <circle cx="40" cy="40" r="3.4" fill="#F4B740" />
     </svg>
   )
 }
@@ -58,12 +36,12 @@ export default function LogoApp({ tamanho = 'md', comTexto = true, horizontal = 
   if (horizontal) {
     return (
       <div className="flex items-center gap-2.5 select-none">
-        <BolaSvg tamanho="sm" />
+        <RoundelSvg tamanho="sm" />
         <span className="leading-none">
-          <span className="font-display text-lg font-bold uppercase text-[var(--chalk)]">
-            Copa 2026
-          </span>{' '}
-          <span className="text-xs font-medium text-[var(--mist)]">do Cecone</span>
+          <span className="font-display text-lg font-bold uppercase text-[var(--chalk)]">Copa 2026</span>{' '}
+          <span className="font-display text-[11px] font-semibold uppercase tracking-[0.2em] text-[var(--copa-gold)]">
+            do Cecone
+          </span>
         </span>
       </div>
     )
@@ -71,7 +49,7 @@ export default function LogoApp({ tamanho = 'md', comTexto = true, horizontal = 
 
   return (
     <div className="flex flex-col items-center gap-3 select-none">
-      <BolaSvg tamanho={tamanho} />
+      <RoundelSvg tamanho={tamanho} />
       {comTexto && (
         <div className="text-center leading-none">
           <div
@@ -82,7 +60,7 @@ export default function LogoApp({ tamanho = 'md', comTexto = true, horizontal = 
             Copa 2026
           </div>
           <div
-            className={`mt-1 font-medium uppercase tracking-[0.2em] text-[var(--copa-gold)] ${
+            className={`mt-1.5 font-display font-semibold uppercase tracking-[0.25em] text-[var(--copa-gold)] ${
               tamanho === 'lg' ? 'text-xs' : 'text-[10px]'
             }`}
           >
