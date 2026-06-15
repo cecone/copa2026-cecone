@@ -650,7 +650,6 @@ async function sincronizarStats(admin: ReturnType<typeof createAdminClient>) {
     }
 
     const json = await res.json()
-    // Estrutura real: { match_id, stats: {...}, timeline: [...] }
     const s = json.stats as WC2026Stats | undefined
     const timeline: WC2026StatsEvent[] = json.timeline ?? []
 
