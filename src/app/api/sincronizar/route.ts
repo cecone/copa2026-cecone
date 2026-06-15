@@ -578,9 +578,10 @@ function mapTipoEvento(t: string): 'gol' | 'gol_contra' | 'amarelo' | 'vermelho'
 async function sincronizarStats(admin: ReturnType<typeof createAdminClient>) {
   if (!process.env.WC2026_KEY) return { stats_salvos: 0, pendentes: 0 }
 
+  // Partidas encerradas no banco que ainda não têm stats
   const { data: encerradas } = await admin
     .from('partidas')
-    .select('id')
+    .select('id, selecao_casa_id, selecao_fora_id')
     .eq('status', 'encerrada')
 
   const { data: jaTem } = await admin
@@ -588,22 +589,57 @@ async function sincronizarStats(admin: ReturnType<typeof createAdminClient>) {
     .select('partida_id')
 
   const idsComStats = new Set((jaTem ?? []).map(s => s.partida_id))
-  const pendentes = (encerradas ?? [])
-    .map(p => p.id as number)
-    .filter(id => !idsComStats.has(id))
+  const pendentes = (encerradas ?? []).filter(p => !idsComStats.has(p.id))
+
+  if (pendentes.length === 0) return { stats_salvos: 0, pendentes: 0 }
+
+  // Busca a lista da API para descobrir os IDs reais de cada jogo.
+  // Nosso banco usa IDs hash (openfootball); a API usa seus próprios IDs.
+  const limiteListagem = await verificarRateLimit(admin)
+  if (!limiteListagem.permitido) return { stats_salvos: 0, pendentes: pendentes.length, motivo: limiteListagem.motivo }
+
+  const resLista = await fetch(`${WC_BASE}/matches`, { headers: wcHeaders() })
+  await registrarRequisicao(admin, limiteListagem.hoje, limiteListagem.count, 2)
+  if (!resLista.ok) return { stats_salvos: 0, pendentes: pendentes.length }
+
+  const jsonLista = await resLista.json()
+  const apiPartidas: WC2026Match[] = Array.isArray(jsonLista) ? jsonLista : (jsonLista.data ?? [])
+
+  // Mapa "CASACODE|FORACODE" → ID real da API
+  const apiIdPorTimes = new Map<string, number>()
+  for (const ap of apiPartidas) {
+    const casaCodigo = ap.home_team_code ?? codigoDoNome(ap.home_team)
+    const foraCodigo = ap.away_team_code ?? codigoDoNome(ap.away_team)
+    apiIdPorTimes.set(`${casaCodigo}|${foraCodigo}`, ap.id)
+  }
+
+  // Buscar códigos das seleções envolvidas
+  const selIds = [...new Set(pendentes.flatMap(p => [p.selecao_casa_id, p.selecao_fora_id].filter(Boolean)))]
+  const { data: selecoes } = await admin.from('selecoes').select('id, codigo').in('id', selIds)
+  const codigoPorId = new Map((selecoes ?? []).map(s => [s.id, s.codigo]))
 
   let salvos = 0
-  for (const partidaId of pendentes) {
+  for (const partida of pendentes) {
+    const casaCodigo = codigoPorId.get(partida.selecao_casa_id)
+    const foraCodigo = codigoPorId.get(partida.selecao_fora_id)
+    if (!casaCodigo || !foraCodigo) continue
+
+    const apiId = apiIdPorTimes.get(`${casaCodigo}|${foraCodigo}`)
+    if (!apiId) {
+      console.log(`[sincronizar/stats] sem ID da API para ${casaCodigo} vs ${foraCodigo}`)
+      continue
+    }
+
     const limite = await verificarRateLimit(admin)
     if (!limite.permitido) {
       console.log(`[sincronizar/stats] parou — ${limite.motivo}`)
       break
     }
 
-    const res = await fetch(`${WC_BASE}/matches/${partidaId}/stats`, { headers: wcHeaders() })
-    await registrarRequisicao(admin, limite.hoje, limite.count, 2) // 2s entre stats, sem travar o loop
+    const res = await fetch(`${WC_BASE}/matches/${apiId}/stats`, { headers: wcHeaders() })
+    await registrarRequisicao(admin, limite.hoje, limite.count, 2)
     if (!res.ok) {
-      console.log(`[sincronizar/stats] jogo ${partidaId}: HTTP ${res.status}`)
+      console.log(`[sincronizar/stats] jogo ${apiId} (${casaCodigo} vs ${foraCodigo}): HTTP ${res.status}`)
       continue
     }
 
@@ -625,7 +661,7 @@ async function sincronizarStats(admin: ReturnType<typeof createAdminClient>) {
       .filter(Boolean)
 
     await admin.from('partida_stats').upsert({
-      partida_id: partidaId,
+      partida_id: partida.id,
       posse_casa: s.home_possession ?? null,
       posse_fora: s.away_possession ?? null,
       chutes_alvo_casa: s.home_shots_on_target ?? null,
