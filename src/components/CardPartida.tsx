@@ -1,71 +1,84 @@
 import { Partida } from '@/types'
 import Bandeira from './Bandeira'
 
-type Props = {
-  partida: Partida
-}
+type Props = { partida: Partida }
 
 export default function CardPartida({ partida }: Props) {
   const { selecao_casa, selecao_fora, gols_casa, gols_fora, status, minuto, hora, fase } = partida
 
-  const vencedor =
-    gols_casa !== null && gols_fora !== null
-      ? gols_casa > gols_fora ? 'casa' : gols_fora > gols_casa ? 'fora' : 'empate'
-      : null
+  const aoVivo = status === 'ao_vivo'
+  const encerrada = status === 'encerrada'
+  const agendada = status === 'agendada'
+  const temPlacar = gols_casa !== null && gols_fora !== null
+
+  const vencedor = temPlacar
+    ? gols_casa! > gols_fora! ? 'casa' : gols_fora! > gols_casa! ? 'fora' : 'empate'
+    : null
 
   return (
-    <div className={`bg-[var(--surface)] rounded-xl p-4 border ${status === 'ao_vivo' ? 'border-[var(--copa-red)]' : 'border-white/10'}`}>
-      {/* Fase + status */}
-      <div className="flex items-center justify-between mb-3">
-        <span className="text-[10px] text-white/40 uppercase tracking-widest font-semibold">{fase}</span>
-        {status === 'ao_vivo' && (
-          <span className="flex items-center gap-1 text-[var(--copa-red)] text-xs font-bold">
-            <span className="w-1.5 h-1.5 rounded-full bg-[var(--copa-red)] animate-pulse"></span>
+    <div
+      className={`relative overflow-hidden rounded-2xl border bg-[var(--turf)] ${
+        aoVivo ? 'border-[var(--copa-red)]' : 'border-[var(--line)]'
+      }`}
+    >
+      {/* Cabeçalho: fase + status */}
+      <div className="flex items-center justify-between px-4 pt-3">
+        <span className="font-display text-xs font-semibold uppercase tracking-wider text-[var(--mist)]">
+          {fase}
+        </span>
+
+        {aoVivo && (
+          <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-[var(--copa-red)]">
+            <span className="h-1.5 w-1.5 rounded-full bg-[var(--copa-red)] animate-pulse motion-reduce:animate-none" />
             {minuto}&apos;
           </span>
         )}
-        {status === 'encerrada' && (
-          <span className="text-[10px] text-white/30 uppercase tracking-wider">Encerrado</span>
+        {encerrada && (
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--mist)]">
+            Encerrado
+          </span>
         )}
-        {status === 'agendada' && (
-          <span className="text-[10px] text-[var(--copa-gold)] font-semibold">{hora}</span>
+        {agendada && (
+          <span className="tnum font-display text-sm font-bold text-[var(--copa-gold)]">{hora}</span>
         )}
       </div>
 
-      {/* Times e placar */}
-      <div className="flex items-center justify-between gap-2">
-        {/* Time da casa */}
-        <div className={`flex flex-col items-center gap-1 flex-1 ${vencedor === 'fora' ? 'opacity-40' : ''}`}>
-          <Bandeira codigo={selecao_casa.codigo} emoji={selecao_casa.bandeira} nome={selecao_casa.nome} tamanho="lg" />
-          <span className="text-xs font-semibold text-center text-white/80 leading-tight">{selecao_casa.nome}</span>
-        </div>
+      {/* Placar */}
+      <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 px-4 py-4">
+        <TimeCol selecao={selecao_casa} dim={vencedor === 'fora'} />
 
-        {/* Placar / Horário */}
-        <div className="flex flex-col items-center gap-1 min-w-[80px]">
-          {status === 'agendada' ? (
-            <span className="text-white/30 text-lg font-bold tracking-widest">vs</span>
+        <div className="flex min-w-[88px] flex-col items-center">
+          {agendada ? (
+            <span className="font-display text-2xl font-bold text-[var(--mist)]">VS</span>
           ) : (
-            <div className="flex items-center gap-2">
-              <span className={`text-3xl font-black tabular-nums ${vencedor === 'casa' ? 'text-white' : 'text-white/50'}`}>
+            <div className="flex items-baseline gap-2 font-display font-bold tnum">
+              <span className={`text-4xl ${vencedor === 'casa' ? 'text-[var(--chalk)]' : 'text-[var(--mist)]'}`}>
                 {gols_casa}
               </span>
-              <span className="text-white/30 text-xl font-light">–</span>
-              <span className={`text-3xl font-black tabular-nums ${vencedor === 'fora' ? 'text-white' : 'text-white/50'}`}>
+              <span className="text-xl text-[var(--mist)]">–</span>
+              <span className={`text-4xl ${vencedor === 'fora' ? 'text-[var(--chalk)]' : 'text-[var(--mist)]'}`}>
                 {gols_fora}
               </span>
             </div>
           )}
-          {status === 'encerrada' && vencedor === 'empate' && (
-            <span className="text-[10px] text-white/30">Empate</span>
+          {encerrada && vencedor === 'empate' && (
+            <span className="mt-1 text-[10px] uppercase tracking-wide text-[var(--mist)]">Empate</span>
           )}
         </div>
 
-        {/* Time de fora */}
-        <div className={`flex flex-col items-center gap-1 flex-1 ${vencedor === 'casa' ? 'opacity-40' : ''}`}>
-          <Bandeira codigo={selecao_fora.codigo} emoji={selecao_fora.bandeira} nome={selecao_fora.nome} tamanho="lg" />
-          <span className="text-xs font-semibold text-center text-white/80 leading-tight">{selecao_fora.nome}</span>
-        </div>
+        <TimeCol selecao={selecao_fora} dim={vencedor === 'casa'} />
       </div>
+    </div>
+  )
+}
+
+function TimeCol({ selecao, dim }: { selecao: Partida['selecao_casa']; dim: boolean }) {
+  return (
+    <div className={`flex flex-col items-center gap-1.5 ${dim ? 'opacity-40' : ''}`}>
+      <Bandeira codigo={selecao.codigo} emoji={selecao.bandeira} nome={selecao.nome} tamanho="lg" />
+      <span className="text-center text-xs font-semibold leading-tight text-[var(--chalk)]">
+        {selecao.nome}
+      </span>
     </div>
   )
 }

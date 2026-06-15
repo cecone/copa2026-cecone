@@ -1,26 +1,45 @@
+@import url('https://fonts.googleapis.com/css2?family=Saira+Condensed:wght@500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
 @import "tailwindcss";
 
 :root {
-  /* Copa 2026 — cores base */
-  --copa-red: #C8102E;
-  --copa-blue: #003DA5;
-  --copa-gold: #F5A623;
-  --background: #0d0d1a;
-  --foreground: #f0f0f0;
-  --surface: #1a1a2e;
+  /* Base — "campo à noite" */
+  --pitch:   #0A130F;   /* fundo da página */
+  --turf:    #111E18;   /* card / tabela */
+  --turf-2:  #15261E;   /* card elevado */
+  --line:    #21362B;   /* bordas / linhas de cal */
+  --chalk:   #EDF2EC;   /* texto principal */
+  --mist:    #7C9488;   /* texto secundário (melhor que white/40) */
+
+  /* Cores do "uniforme" — acentos da sua marca */
+  --copa-gold: #F4B740; /* dourado troféu: classificados, bolão, logo */
+  --copa-blue: #2E6BFF; /* azul: ação principal / navegação */
+  --copa-red:  #FF5436; /* vermelho: ao vivo / erros */
+
+  /* Compatibilidade com o código atual (não remova) */
+  --background: var(--pitch);
+  --foreground: var(--chalk);
+  --surface:    var(--turf-2);
+
+  --font-display: 'Saira Condensed', sans-serif;
+  --font-ui: 'Plus Jakarta Sans', sans-serif;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-surface: var(--surface);
+  --color-background: var(--pitch);
+  --color-foreground: var(--chalk);
+  --color-surface: var(--turf-2);
   --color-copa-red: var(--copa-red);
   --color-copa-blue: var(--copa-blue);
   --color-copa-gold: var(--copa-gold);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--pitch);
+  color: var(--chalk);
+  font-family: var(--font-ui);
+  -webkit-font-smoothing: antialiased;
 }
+
+/* Utilitários usados pelos componentes */
+.font-display { font-family: var(--font-display); letter-spacing: .04em; }
+.tnum { font-variant-numeric: tabular-nums; }

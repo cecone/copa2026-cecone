@@ -1,11 +1,6 @@
 import { Grupo } from '@/types'
-import Bandeira from './Bandeira'
 
-type Props = {
-  grupo: Grupo
-}
-
-export default function TabelaGrupo({ grupo }: Props) {
+export default function TabelaGrupo({ grupo }: { grupo: Grupo }) {
   const times = [...grupo.times].sort((a, b) => {
     if (b.pontos !== a.pontos) return b.pontos - a.pontos
     if (b.saldo !== a.saldo) return b.saldo - a.saldo
@@ -13,70 +8,58 @@ export default function TabelaGrupo({ grupo }: Props) {
   })
 
   return (
-    <div className="rounded-xl overflow-hidden border border-white/10">
-      {/* Cabeçalho do grupo */}
-      <div className="bg-[var(--copa-blue)] px-4 py-2 flex items-center gap-2">
-        <span className="text-xs font-bold text-white/60 uppercase tracking-widest">Grupo</span>
-        <span className="text-lg font-black text-[var(--copa-gold)]">{grupo.nome}</span>
+    <div className="overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--turf)]">
+      {/* Faixa do grupo */}
+      <div className="flex items-center gap-2.5 border-b border-[var(--line)] px-5 py-3.5">
+        <span className="grid h-7 w-7 place-items-center rounded-md bg-[var(--turf-2)] font-display text-base font-bold text-[var(--chalk)]">
+          {grupo.nome}
+        </span>
+        <span className="font-display text-lg font-semibold uppercase text-[var(--chalk)]">
+          Grupo {grupo.nome}
+        </span>
       </div>
 
-      {/* Tabela */}
-      <div className="bg-[var(--surface)]">
-        {/* Cabeçalho das colunas */}
-        <div className="grid grid-cols-[1fr_repeat(6,_auto)] gap-x-3 px-4 py-2 text-xs text-white/40 font-semibold uppercase tracking-wider border-b border-white/10">
-          <span>Seleção</span>
-          <span className="text-center w-6">J</span>
-          <span className="text-center w-6">V</span>
-          <span className="text-center w-6">E</span>
-          <span className="text-center w-6">D</span>
-          <span className="text-center w-8">SG</span>
-          <span className="text-center w-8">Pts</span>
-        </div>
+      {/* Cabeçalho de colunas */}
+      <div className="grid grid-cols-[28px_1fr_32px_40px_40px] gap-2 px-5 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--mist)]">
+        <span className="text-center">#</span>
+        <span>Seleção</span>
+        <span className="text-center">J</span>
+        <span className="text-center">SG</span>
+        <span className="text-center">Pts</span>
+      </div>
 
-        {/* Linhas das seleções */}
-        {times.map((item, index) => {
-          const avanca = index < 2
-          return (
-            <div
-              key={item.selecao.id}
-              className={`grid grid-cols-[1fr_repeat(6,_auto)] gap-x-3 px-4 py-3 items-center text-sm border-b border-white/5 last:border-0 ${
-                avanca ? 'bg-[var(--copa-blue)]/10' : ''
+      {/* Linhas */}
+      {times.map((time, i) => {
+        const classificado = i < 2
+        return (
+          <div
+            key={time.selecao.id}
+            className="grid grid-cols-[28px_1fr_32px_40px_40px] items-center gap-2 border-t border-[var(--line)] px-5 py-3"
+          >
+            <span
+              className={`text-center font-display text-base font-bold ${
+                classificado ? 'text-[var(--copa-gold)]' : 'text-[var(--mist)]'
               }`}
             >
-              {/* Seleção */}
-              <div className="flex items-center gap-2 min-w-0">
-                <span className="text-xs text-white/30 w-3">{index + 1}</span>
-                <Bandeira codigo={item.selecao.codigo} emoji={item.selecao.bandeira} nome={item.selecao.nome} tamanho="sm" />
-                <span className={`truncate font-medium ${avanca ? 'text-white' : 'text-white/70'}`}>
-                  {item.selecao.nome}
-                </span>
-                {avanca && (
-                  <span className="hidden sm:inline-block text-[10px] bg-[var(--copa-blue)] text-white px-1.5 py-0.5 rounded font-bold ml-1">
-                    ✓
-                  </span>
-                )}
-              </div>
+              {i + 1}
+            </span>
 
-              <span className="text-center w-6 text-white/60">{item.jogos}</span>
-              <span className="text-center w-6 text-white/60">{item.vitorias}</span>
-              <span className="text-center w-6 text-white/60">{item.empates}</span>
-              <span className="text-center w-6 text-white/60">{item.derrotas}</span>
-              <span className={`text-center w-8 ${item.saldo > 0 ? 'text-green-400' : item.saldo < 0 ? 'text-red-400' : 'text-white/60'}`}>
-                {item.saldo > 0 ? `+${item.saldo}` : item.saldo}
-              </span>
-              <span className={`text-center w-8 font-bold ${avanca ? 'text-[var(--copa-gold)]' : 'text-white'}`}>
-                {item.pontos}
-              </span>
-            </div>
-          )
-        })}
-      </div>
+            <span className="flex items-center gap-2.5 font-medium text-[var(--chalk)]">
+              <span className="text-lg leading-none">{time.selecao.bandeira}</span>
+              <span className="truncate">{time.selecao.nome}</span>
+            </span>
 
-      {/* Legenda */}
-      <div className="bg-[var(--surface)] px-4 py-2 flex items-center gap-2 border-t border-white/10">
-        <span className="w-2 h-2 rounded-sm bg-[var(--copa-blue)]"></span>
-        <span className="text-[10px] text-white/30">Avança para as oitavas</span>
-      </div>
+            <span className="tnum text-center text-sm text-[var(--mist)]">{time.jogos}</span>
+            <span className="tnum text-center text-sm text-[var(--mist)]">
+              {time.saldo > 0 ? '+' : ''}
+              {time.saldo}
+            </span>
+            <span className="tnum text-center font-display text-lg font-bold text-[var(--chalk)]">
+              {time.pontos}
+            </span>
+          </div>
+        )
+      })}
     </div>
   )
 }

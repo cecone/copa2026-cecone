@@ -1,13 +1,15 @@
 import { PartidaEliminatoria } from '@/lib/dados-mock'
 import Bandeira from './Bandeira'
 
-type Props = {
-  partida: PartidaEliminatoria
-}
+type Props = { partida: PartidaEliminatoria }
 
 export default function CardEliminatoria({ partida }: Props) {
-  const { selecao_casa, selecao_fora, gols_casa, gols_fora, penaltis_casa, penaltis_fora, status, minuto, hora, data } = partida
+  const {
+    selecao_casa, selecao_fora, gols_casa, gols_fora,
+    penaltis_casa, penaltis_fora, status, minuto, hora, data,
+  } = partida
 
+  const aoVivo = status === 'ao_vivo'
   const aDefinir = status === 'a_definir'
 
   const vencedor =
@@ -22,79 +24,81 @@ export default function CardEliminatoria({ partida }: Props) {
   }
 
   return (
-    <div className={`bg-[var(--surface)] rounded-xl border overflow-hidden ${
-      status === 'ao_vivo' ? 'border-[var(--copa-red)]' : 'border-white/10'
-    }`}>
+    <div
+      className={`overflow-hidden rounded-2xl border bg-[var(--turf)] ${
+        aoVivo ? 'border-[var(--copa-red)]' : 'border-[var(--line)]'
+      }`}
+    >
       {/* Cabeçalho */}
-      <div className="flex items-center justify-between px-4 py-2 border-b border-white/5">
-        {status === 'ao_vivo' ? (
-          <span className="flex items-center gap-1 text-[var(--copa-red)] text-xs font-bold">
-            <span className="w-1.5 h-1.5 rounded-full bg-[var(--copa-red)] animate-pulse"></span>
+      <div className="flex items-center justify-between border-b border-[var(--line)] px-4 py-2.5">
+        {aoVivo ? (
+          <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-[var(--copa-red)]">
+            <span className="h-1.5 w-1.5 rounded-full bg-[var(--copa-red)] animate-pulse motion-reduce:animate-none" />
             {minuto}&apos;
           </span>
         ) : status === 'encerrada' ? (
-          <span className="text-[10px] text-white/30 uppercase tracking-wider">Encerrado</span>
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--mist)]">Encerrado</span>
         ) : aDefinir ? (
-          <span className="text-[10px] text-white/20 uppercase tracking-wider">A definir</span>
+          <span className="text-[10px] uppercase tracking-wider text-[var(--mist)]/60">A definir</span>
         ) : (
-          <span className="text-[10px] text-[var(--copa-gold)] font-semibold">{formatarData(data)} · {hora}</span>
+          <span className="tnum font-display text-xs font-bold uppercase text-[var(--copa-gold)]">
+            {formatarData(data)} · {hora}
+          </span>
         )}
         {penaltis_casa != null && (
-          <span className="text-[10px] text-white/40">Pênaltis</span>
+          <span className="text-[10px] uppercase tracking-wide text-[var(--mist)]">Pênaltis</span>
         )}
       </div>
 
-      {/* Times */}
-      <div className="p-4 flex flex-col gap-2">
-        {/* Casa */}
-        <div className="flex items-center justify-between gap-3">
-          <div className={`flex items-center gap-3 flex-1 min-w-0 ${vencedor === 'fora' ? 'opacity-40' : ''}`}>
-            {aDefinir || !selecao_casa
-              ? <span className="text-2xl">❓</span>
-              : <Bandeira codigo={selecao_casa.codigo} emoji={selecao_casa.bandeira} nome={selecao_casa.nome} tamanho="md" />
-            }
-            <span className={`text-sm font-semibold truncate ${vencedor === 'casa' ? 'text-white' : 'text-white/70'}`}>
-              {aDefinir || !selecao_casa ? 'A definir' : selecao_casa.nome}
-            </span>
-            {vencedor === 'casa' && <span className="text-[var(--copa-gold)] text-xs">✓</span>}
-          </div>
-          <div className="flex items-center gap-2 text-right">
-            {penaltis_casa != null && (
-              <span className="text-white/30 text-xs">({penaltis_casa})</span>
-            )}
-            <span className={`text-xl font-black w-5 text-right tabular-nums ${
-              gols_casa !== null ? (vencedor === 'casa' ? 'text-white' : 'text-white/40') : 'text-white/10'
-            }`}>
-              {gols_casa ?? '–'}
-            </span>
-          </div>
-        </div>
+      {/* Times (linhas) */}
+      <div className="flex flex-col gap-2 p-4">
+        <LinhaTime
+          selecao={selecao_casa} aDefinir={aDefinir} venceu={vencedor === 'casa'}
+          perdeu={vencedor === 'fora'} gols={gols_casa} penaltis={penaltis_casa ?? null}
+        />
+        <div className="border-t border-[var(--line)]" />
+        <LinhaTime
+          selecao={selecao_fora} aDefinir={aDefinir} venceu={vencedor === 'fora'}
+          perdeu={vencedor === 'casa'} gols={gols_fora} penaltis={penaltis_fora ?? null}
+        />
+      </div>
+    </div>
+  )
+}
 
-        <div className="border-t border-white/5"></div>
+type LinhaProps = {
+  selecao: PartidaEliminatoria['selecao_casa']
+  aDefinir: boolean
+  venceu: boolean
+  perdeu: boolean
+  gols: number | null
+  penaltis: number | null
+}
 
-        {/* Fora */}
-        <div className="flex items-center justify-between gap-3">
-          <div className={`flex items-center gap-3 flex-1 min-w-0 ${vencedor === 'casa' ? 'opacity-40' : ''}`}>
-            {aDefinir || !selecao_fora
-              ? <span className="text-2xl">❓</span>
-              : <Bandeira codigo={selecao_fora.codigo} emoji={selecao_fora.bandeira} nome={selecao_fora.nome} tamanho="md" />
-            }
-            <span className={`text-sm font-semibold truncate ${vencedor === 'fora' ? 'text-white' : 'text-white/70'}`}>
-              {aDefinir || !selecao_fora ? 'A definir' : selecao_fora.nome}
-            </span>
-            {vencedor === 'fora' && <span className="text-[var(--copa-gold)] text-xs">✓</span>}
-          </div>
-          <div className="flex items-center gap-2 text-right">
-            {penaltis_fora != null && (
-              <span className="text-white/30 text-xs">({penaltis_fora})</span>
-            )}
-            <span className={`text-xl font-black w-5 text-right tabular-nums ${
-              gols_fora !== null ? (vencedor === 'fora' ? 'text-white' : 'text-white/40') : 'text-white/10'
-            }`}>
-              {gols_fora ?? '–'}
-            </span>
-          </div>
-        </div>
+function LinhaTime({ selecao, aDefinir, venceu, perdeu, gols, penaltis }: LinhaProps) {
+  return (
+    <div className={`flex items-center justify-between gap-3 ${perdeu ? 'opacity-40' : ''}`}>
+      <div className="flex min-w-0 flex-1 items-center gap-3">
+        {aDefinir || !selecao ? (
+          <span className="text-2xl">❓</span>
+        ) : (
+          <Bandeira codigo={selecao.codigo} emoji={selecao.bandeira} nome={selecao.nome} tamanho="md" />
+        )}
+        <span className={`truncate text-sm font-semibold ${venceu ? 'text-[var(--chalk)]' : 'text-[var(--mist)]'}`}>
+          {aDefinir || !selecao ? 'A definir' : selecao.nome}
+        </span>
+        {venceu && <span className="text-xs text-[var(--copa-gold)]">✓</span>}
+      </div>
+
+      <div className="flex items-center gap-2">
+        {penaltis != null && <span className="text-xs text-[var(--mist)]">({penaltis})</span>}
+        <span
+          className={`tnum w-6 text-right font-display text-2xl font-bold ${
+            gols !== null ? (venceu ? 'text-[var(--chalk)]' : 'text-[var(--mist)]') : 'text-[var(--line)]'
+          }`}
+        >
+          {gols ?? '–'}
+        </span>
       </div>
     </div>
   )

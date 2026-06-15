@@ -9,6 +9,7 @@ export const revalidate = 60 // revalida a cada 60 segundos
 export default async function GruposPage() {
   const supabase = await createClient()
 
+  // ── DADOS: idêntico ao seu, nada mudou aqui ──
   const { data: linhas } = await supabase
     .from('classificacao_grupos')
     .select(`
@@ -19,7 +20,6 @@ export default async function GruposPage() {
     .order('grupo', { ascending: true })
     .order('posicao', { ascending: true })
 
-  // Agrupar linhas por grupo
   const mapaGrupos = new Map<string, Grupo>()
 
   for (const linha of linhas ?? []) {
@@ -45,32 +45,54 @@ export default async function GruposPage() {
 
   const grupos = Array.from(mapaGrupos.values()).sort((a, b) => a.nome.localeCompare(b.nome))
 
+  // ── VISUAL: o que foi melhorado ──
   return (
-    <div className="min-h-screen p-4 sm:p-8">
-      <div className="max-w-5xl mx-auto">
-        <div className="flex items-center justify-between mb-8">
-          <Link href="/" className="text-white/40 hover:text-white text-sm transition-colors">
-            ← Início
+    <div className="min-h-screen px-4 pb-16 pt-6 sm:px-8">
+      <div className="mx-auto max-w-5xl">
+        {/* Topo */}
+        <header className="mb-8 flex items-center justify-between">
+          <Link
+            href="/"
+            className="inline-flex items-center gap-2 text-sm text-[var(--mist)] transition-colors hover:text-[var(--chalk)]"
+          >
+            <span aria-hidden>←</span> Início
           </Link>
           <LogoApp horizontal />
+        </header>
+
+        {/* Título com eyebrow + display condensado */}
+        <div className="mb-7">
+          <p className="mb-1 text-[11px] uppercase tracking-[0.18em] text-[var(--mist)]">
+            Copa do Mundo 2026
+          </p>
+          <h1 className="font-display text-4xl font-bold uppercase text-[var(--chalk)]">
+            Fase de grupos
+          </h1>
         </div>
 
-        <h2 className="text-2xl font-bold text-white mb-6">Fase de Grupos</h2>
-
+        {/* Estado vazio = convite, não desculpa */}
         {grupos.length === 0 ? (
-          <p className="text-white/40 text-center py-16">
-            Os dados da classificação ainda não foram carregados.
-          </p>
+          <div className="rounded-2xl border border-[var(--line)] bg-[var(--turf)] py-16 text-center">
+            <p className="mb-3 text-3xl">📊</p>
+            <p className="font-display text-xl uppercase text-[var(--chalk)]">
+              Classificação a caminho
+            </p>
+            <p className="mx-auto mt-1 max-w-xs text-sm text-[var(--mist)]">
+              As tabelas aparecem aqui assim que a primeira rodada for sincronizada.
+            </p>
+          </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
             {grupos.map(grupo => (
               <TabelaGrupo key={grupo.nome} grupo={grupo} />
             ))}
           </div>
         )}
 
-        <p className="text-center text-white/20 text-xs mt-8">
-          J = Jogos · V = Vitórias · E = Empates · D = Derrotas · SG = Saldo de Gols · Pts = Pontos
+        {/* Legenda enxuta */}
+        <p className="mt-8 text-center text-xs text-[var(--mist)]">
+          J = Jogos · SG = Saldo de gols · Pts = Pontos ·{' '}
+          <span className="text-[var(--copa-gold)]">●</span> classificados
         </p>
       </div>
     </div>

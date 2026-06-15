@@ -20,6 +20,19 @@ export default function FormPalpite({ partida, grupoId, palpiteAtual }: Props) {
 
   const encerrada = partida.status === 'encerrada' || partida.status === 'ao_vivo'
 
+  function calcularPontos(): number | null {
+    if (partida.status !== 'encerrada') return null
+    if (!palpiteAtual) return null
+    if (partida.gols_casa === null || partida.gols_fora === null) return null
+    if (palpiteAtual.gols_casa === partida.gols_casa && palpiteAtual.gols_fora === partida.gols_fora) return 7
+    const resultadoReal = Math.sign(partida.gols_casa - partida.gols_fora)
+    const resultadoPalpite = Math.sign(palpiteAtual.gols_casa - palpiteAtual.gols_fora)
+    if (resultadoReal === resultadoPalpite) return 3
+    return 0
+  }
+
+  const pontos = calcularPontos()
+
   async function handleSalvar() {
     if (casa === '' || fora === '') return
     setSalvando(true)
@@ -57,12 +70,32 @@ export default function FormPalpite({ partida, grupoId, palpiteAtual }: Props) {
 
       {/* Inputs de placar */}
       {encerrada ? (
-        <div className="text-center text-white/30 text-xs">
-          {partida.status === 'ao_vivo' ? 'Partida em andamento' : 'Partida encerrada'}
-          {palpiteAtual && (
-            <span className="block text-white/50 mt-1">
-              Seu palpite: {palpiteAtual.gols_casa} × {palpiteAtual.gols_fora}
-            </span>
+        <div className="text-center text-xs space-y-1">
+          {partida.status === 'ao_vivo' ? (
+            <span className="text-white/30">Partida em andamento</span>
+          ) : (
+            <>
+              <span className="block text-white/30">
+                Resultado: {partida.gols_casa} × {partida.gols_fora}
+              </span>
+              {palpiteAtual && (
+                <span className="block text-white/50">
+                  Seu palpite: {palpiteAtual.gols_casa} × {palpiteAtual.gols_fora}
+                </span>
+              )}
+              {pontos !== null && (
+                <span className={`block font-bold mt-2 ${
+                  pontos === 7 ? 'text-[var(--copa-gold)]' :
+                  pontos === 3 ? 'text-green-400' :
+                  'text-white/30'
+                }`}>
+                  {pontos} pts
+                </span>
+              )}
+              {partida.status === 'encerrada' && !palpiteAtual && (
+                <span className="block text-white/20">Sem palpite registrado</span>
+              )}
+            </>
           )}
         </div>
       ) : (
