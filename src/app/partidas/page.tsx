@@ -94,7 +94,11 @@ export default async function PartidasPage() {
               <span className="text-sm font-bold text-[var(--copa-red)] uppercase tracking-wider">Ao vivo agora</span>
             </div>
             <div className="flex flex-col gap-3">
-              {aoVivo.map(p => <CardPartida key={p.id} partida={p} />)}
+              {aoVivo.map(p => (
+                <Link key={p.id} href={`/partidas/${p.id}`}>
+                  <CardPartida partida={p} />
+                </Link>
+              ))}
             </div>
           </div>
         )}
@@ -106,7 +110,11 @@ export default async function PartidasPage() {
               {formatarData(data)}
             </h3>
             <div className="flex flex-col gap-3">
-              {porData[data].map(p => <CardPartida key={p.id} partida={p} />)}
+              {porData[data].map(p => (
+                <Link key={p.id} href={`/partidas/${p.id}`}>
+                  <CardPartida partida={p} />
+                </Link>
+              ))}
             </div>
           </div>
         ))}

@@ -63,6 +63,11 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ ok: true, tipo: 'vivo', ...resultado })
     }
 
+    if (tipo === 'stats') {
+      const r = await sincronizarStats(admin)
+      return NextResponse.json({ ok: true, tipo: 'stats', ...r })
+    }
+
     if (tipo === 'partidas' || tipo === 'tudo') {
       await sincronizarPartidas(admin)
     }
@@ -560,6 +565,87 @@ async function sincronizarClassificacao(admin: ReturnType<typeof createAdminClie
   }
 }
 
+function mapTipoEvento(t: string): 'gol' | 'gol_contra' | 'amarelo' | 'vermelho' | null {
+  if (t === 'goal')        return 'gol'
+  if (t === 'own_goal')    return 'gol_contra'
+  if (t === 'yellow_card') return 'amarelo'
+  if (t === 'red_card')    return 'vermelho'
+  return null
+}
+
+async function sincronizarStats(admin: ReturnType<typeof createAdminClient>) {
+  if (!process.env.WC2026_KEY) return { stats_salvos: 0, pendentes: 0 }
+
+  const { data: encerradas } = await admin
+    .from('partidas')
+    .select('id')
+    .eq('status', 'encerrada')
+
+  const { data: jaTem } = await admin
+    .from('partida_stats')
+    .select('partida_id')
+
+  const idsComStats = new Set((jaTem ?? []).map(s => s.partida_id))
+  const pendentes = (encerradas ?? [])
+    .map(p => p.id as number)
+    .filter(id => !idsComStats.has(id))
+
+  let salvos = 0
+  for (const partidaId of pendentes) {
+    const limite = await verificarRateLimit(admin)
+    if (!limite.permitido) {
+      console.log(`[sincronizar/stats] parou — ${limite.motivo}`)
+      break
+    }
+
+    const res = await fetch(`${WC_BASE}/matches/${partidaId}/stats`, { headers: wcHeaders() })
+    await registrarRequisicao(admin, limite.hoje, limite.count, null)
+    if (!res.ok) {
+      console.log(`[sincronizar/stats] jogo ${partidaId}: HTTP ${res.status}`)
+      continue
+    }
+
+    const json = await res.json()
+    const s: WC2026Stats = json.data ?? json
+
+    const eventos = (s.events ?? [])
+      .map(ev => {
+        const tipo = mapTipoEvento(ev.type)
+        if (!tipo) return null
+        return {
+          tipo,
+          minuto: ev.minute,
+          acrescimo: ev.stoppage ?? null,
+          jogador: ev.player,
+          time_codigo: ev.team_code,
+        }
+      })
+      .filter(Boolean)
+
+    await admin.from('partida_stats').upsert({
+      partida_id: partidaId,
+      posse_casa: s.home_possession ?? null,
+      posse_fora: s.away_possession ?? null,
+      chutes_alvo_casa: s.home_shots_on_target ?? null,
+      chutes_alvo_fora: s.away_shots_on_target ?? null,
+      escanteios_casa: s.home_corners ?? null,
+      escanteios_fora: s.away_corners ?? null,
+      faltas_casa: s.home_fouls ?? null,
+      faltas_fora: s.away_fouls ?? null,
+      amarelos_casa: s.home_yellow_cards ?? null,
+      amarelos_fora: s.away_yellow_cards ?? null,
+      vermelhos_casa: s.home_red_cards ?? null,
+      vermelhos_fora: s.away_red_cards ?? null,
+      eventos,
+      atualizado_em: new Date().toISOString(),
+    }, { onConflict: 'partida_id' })
+
+    salvos++
+  }
+
+  return { stats_salvos: salvos, pendentes: pendentes.length }
+}
+
 function mapRoundWC2026(round: string, group?: string): { fase_tipo: string; fase: string } {
   if (round === 'group' && group) return { fase_tipo: 'grupos', fase: `Grupo ${group}` }
   if (round === 'round_of_32') return { fase_tipo: 'rodada32', fase: 'Rodada de 32' }
@@ -606,6 +692,24 @@ type WC2026Match = {
   minute?: number | null
   home_penalties?: number | null
   away_penalties?: number | null
+}
+
+type WC2026StatsEvent = {
+  type: string
+  minute: number
+  stoppage?: number | null
+  player: string
+  team_code: string
+}
+
+type WC2026Stats = {
+  home_possession?: number;        away_possession?: number
+  home_shots_on_target?: number;   away_shots_on_target?: number
+  home_corners?: number;           away_corners?: number
+  home_fouls?: number;             away_fouls?: number
+  home_yellow_cards?: number;      away_yellow_cards?: number
+  home_red_cards?: number;         away_red_cards?: number
+  events?: WC2026StatsEvent[]
 }
 
 type WC2026Standing = {
