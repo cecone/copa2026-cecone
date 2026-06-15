@@ -50,50 +50,50 @@ export default function FormPalpite({ partida, grupoId, palpiteAtual }: Props) {
   }
 
   return (
-    <div className={`bg-[var(--surface)] rounded-xl border p-4 ${encerrada ? 'border-white/5 opacity-60' : 'border-white/10'}`}>
+    <div className={`rounded-2xl border border-[var(--line)] bg-[var(--turf)] p-4 ${encerrada ? 'opacity-60' : ''}`}>
       {/* Times */}
-      <div className="flex items-center justify-between gap-2 mb-3">
-        <div className="flex items-center gap-2 flex-1 min-w-0">
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <div className="flex min-w-0 flex-1 items-center gap-2">
           <Bandeira codigo={partida.selecao_casa.codigo} emoji={partida.selecao_casa.bandeira} nome={partida.selecao_casa.nome} tamanho="sm" />
-          <span className="text-sm font-medium text-white/80 truncate">{partida.selecao_casa.nome}</span>
+          <span className="truncate text-sm font-medium text-[var(--chalk)]">{partida.selecao_casa.nome}</span>
         </div>
-        <span className="text-white/20 text-xs">vs</span>
-        <div className="flex items-center gap-2 flex-1 min-w-0 justify-end">
-          <span className="text-sm font-medium text-white/80 truncate text-right">{partida.selecao_fora.nome}</span>
+        <span className="text-xs text-[var(--mist)]">vs</span>
+        <div className="flex min-w-0 flex-1 items-center justify-end gap-2">
+          <span className="truncate text-right text-sm font-medium text-[var(--chalk)]">{partida.selecao_fora.nome}</span>
           <Bandeira codigo={partida.selecao_fora.codigo} emoji={partida.selecao_fora.bandeira} nome={partida.selecao_fora.nome} tamanho="sm" />
         </div>
       </div>
 
-      <div className="text-[10px] text-white/30 text-center mb-3 uppercase tracking-wider">
+      <div className="mb-3 text-center text-[10px] uppercase tracking-wider text-[var(--mist)]">
         {partida.fase} · {partida.hora}
       </div>
 
       {/* Inputs de placar */}
       {encerrada ? (
-        <div className="text-center text-xs space-y-1">
+        <div className="space-y-1 text-center text-xs">
           {partida.status === 'ao_vivo' ? (
-            <span className="text-white/30">Partida em andamento</span>
+            <span className="text-[var(--mist)]">Partida em andamento</span>
           ) : (
             <>
-              <span className="block text-white/30">
+              <span className="block text-[var(--mist)]">
                 Resultado: {partida.gols_casa} × {partida.gols_fora}
               </span>
               {palpiteAtual && (
-                <span className="block text-white/50">
+                <span className="block text-[var(--chalk)]">
                   Seu palpite: {palpiteAtual.gols_casa} × {palpiteAtual.gols_fora}
                 </span>
               )}
               {pontos !== null && (
-                <span className={`block font-bold mt-2 ${
+                <span className={`mt-2 block font-display text-lg font-bold ${
                   pontos === 7 ? 'text-[var(--copa-gold)]' :
-                  pontos === 3 ? 'text-green-400' :
-                  'text-white/30'
+                  pontos === 3 ? 'text-emerald-400' :
+                  'text-[var(--mist)]'
                 }`}>
                   {pontos} pts
                 </span>
               )}
               {partida.status === 'encerrada' && !palpiteAtual && (
-                <span className="block text-white/20">Sem palpite registrado</span>
+                <span className="block text-[var(--mist)]/60">Sem palpite registrado</span>
               )}
             </>
           )}
@@ -106,31 +106,27 @@ export default function FormPalpite({ partida, grupoId, palpiteAtual }: Props) {
             max={20}
             value={casa}
             onChange={e => setCasa(e.target.value)}
-            className="w-full text-center text-xl font-bold bg-[var(--background)] border border-white/20 rounded-lg py-2 text-white focus:outline-none focus:border-[var(--copa-gold)] transition-colors"
+            className="campo campo-placar"
           />
-          <span className="text-white/30 font-light text-lg">×</span>
+          <span className="text-lg font-light text-[var(--mist)]">×</span>
           <input
             type="number"
             min={0}
             max={20}
             value={fora}
             onChange={e => setFora(e.target.value)}
-            className="w-full text-center text-xl font-bold bg-[var(--background)] border border-white/20 rounded-lg py-2 text-white focus:outline-none focus:border-[var(--copa-gold)] transition-colors"
+            className="campo campo-placar"
           />
           <button
             onClick={handleSalvar}
             disabled={salvando || casa === '' || fora === ''}
-            className={`px-4 py-2 rounded-lg font-bold text-sm transition-all whitespace-nowrap ${
-              salvo
-                ? 'bg-green-600 text-white'
-                : 'bg-[var(--copa-gold)] text-black hover:brightness-110 disabled:opacity-40'
-            }`}
+            className={`btn btn-sm whitespace-nowrap ${salvo ? 'btn-ok' : 'btn-gold'}`}
           >
             {salvando ? '...' : salvo ? '✓' : 'Salvar'}
           </button>
         </div>
       )}
-      {erro && <p className="text-[var(--copa-red)] text-xs mt-2">{erro}</p>}
+      {erro && <p className="mt-2 text-xs text-[var(--copa-red)]">{erro}</p>}
     </div>
   )
 }

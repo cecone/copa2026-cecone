@@ -35,14 +35,10 @@ export default function FormCriarGrupo() {
         value={nome}
         onChange={e => setNome(e.target.value)}
         maxLength={40}
-        className="bg-[var(--background)] border border-white/20 rounded-lg px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:border-[var(--copa-gold)] transition-colors"
+        className="campo"
       />
-      {erro && <p className="text-[var(--copa-red)] text-sm">{erro}</p>}
-      <button
-        type="submit"
-        disabled={carregando || !nome.trim()}
-        className="bg-[var(--copa-gold)] text-black font-bold py-3 rounded-lg hover:brightness-110 transition-all disabled:opacity-40"
-      >
+      {erro && <p className="text-sm text-[var(--copa-red)]">{erro}</p>}
+      <button type="submit" disabled={carregando || !nome.trim()} className="btn btn-gold btn-block">
         {carregando ? 'Criando...' : 'Criar grupo'}
       </button>
     </form>

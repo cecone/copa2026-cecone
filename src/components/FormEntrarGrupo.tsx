@@ -35,14 +35,10 @@ export default function FormEntrarGrupo() {
         value={codigo}
         onChange={e => setCodigo(e.target.value.toUpperCase())}
         maxLength={6}
-        className="bg-[var(--background)] border border-white/20 rounded-lg px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:border-[var(--copa-blue)] transition-colors uppercase tracking-widest font-mono"
+        className="campo font-mono uppercase tracking-widest"
       />
-      {erro && <p className="text-[var(--copa-red)] text-sm">{erro}</p>}
-      <button
-        type="submit"
-        disabled={carregando || codigo.length < 6}
-        className="bg-[var(--copa-blue)] text-white font-bold py-3 rounded-lg hover:brightness-110 transition-all disabled:opacity-40"
-      >
+      {erro && <p className="text-sm text-[var(--copa-red)]">{erro}</p>}
+      <button type="submit" disabled={carregando || codigo.length < 6} className="btn btn-blue btn-block">
         {carregando ? 'Entrando...' : 'Entrar no grupo'}
       </button>
     </form>

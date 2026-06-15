@@ -51,31 +51,31 @@ export default function FormEditarPartida({ partida }: Props) {
   }
 
   return (
-    <div className={`bg-[var(--surface)] rounded-xl border p-4 ${partida.corrigida_manualmente ? 'border-[var(--copa-gold)]/30' : 'border-white/10'}`}>
+    <div className={`rounded-2xl border p-4 ${partida.corrigida_manualmente ? 'border-[var(--copa-gold)]/30' : 'border-[var(--line)]'} bg-[var(--turf)]`}>
       {/* Times */}
-      <div className="flex items-center justify-between gap-2 mb-3">
-        <div className="flex items-center gap-2 flex-1 min-w-0">
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <div className="flex min-w-0 flex-1 items-center gap-2">
           {partida.selecao_casa && (
             <Bandeira codigo={partida.selecao_casa.codigo} emoji={emojiBandeira(partida.selecao_casa.codigo)} nome={nomeCasa} tamanho="sm" />
           )}
-          <span className="text-sm font-semibold text-white/80 truncate">{nomeCasa}</span>
+          <span className="truncate text-sm font-semibold text-[var(--chalk)]">{nomeCasa}</span>
         </div>
-        <span className="text-white/20 text-xs shrink-0">vs</span>
-        <div className="flex items-center gap-2 flex-1 min-w-0 justify-end">
-          <span className="text-sm font-semibold text-white/80 truncate text-right">{nomeFora}</span>
+        <span className="shrink-0 text-xs text-[var(--mist)]">vs</span>
+        <div className="flex min-w-0 flex-1 items-center justify-end gap-2">
+          <span className="truncate text-right text-sm font-semibold text-[var(--chalk)]">{nomeFora}</span>
           {partida.selecao_fora && (
             <Bandeira codigo={partida.selecao_fora.codigo} emoji={emojiBandeira(partida.selecao_fora.codigo)} nome={nomeFora} tamanho="sm" />
           )}
         </div>
       </div>
 
-      <div className="text-[10px] text-white/30 text-center mb-3 uppercase tracking-wider">
+      <div className="mb-3 text-center text-[10px] uppercase tracking-wider text-[var(--mist)]">
         {partida.fase} · {new Date(partida.data_hora).toLocaleDateString('pt-BR')}
-        {partida.corrigida_manualmente && <span className="text-[var(--copa-gold)] ml-2">✎ corrigido</span>}
+        {partida.corrigida_manualmente && <span className="ml-2 text-[var(--copa-gold)]">✎ corrigido</span>}
       </div>
 
       {/* Placar */}
-      <div className="flex items-center gap-2 mb-3">
+      <div className="mb-3 flex items-center gap-2">
         <input
           type="number"
           min={0}
@@ -83,9 +83,9 @@ export default function FormEditarPartida({ partida }: Props) {
           value={golsCasa}
           onChange={e => setGolsCasa(e.target.value)}
           placeholder="–"
-          className="w-full text-center text-xl font-bold bg-[var(--background)] border border-white/20 rounded-lg py-2 text-white focus:outline-none focus:border-[var(--copa-gold)] transition-colors"
+          className="campo campo-placar"
         />
-        <span className="text-white/30 font-light text-lg shrink-0">×</span>
+        <span className="shrink-0 text-lg font-light text-[var(--mist)]">×</span>
         <input
           type="number"
           min={0}
@@ -93,31 +93,27 @@ export default function FormEditarPartida({ partida }: Props) {
           value={golsFora}
           onChange={e => setGolsFora(e.target.value)}
           placeholder="–"
-          className="w-full text-center text-xl font-bold bg-[var(--background)] border border-white/20 rounded-lg py-2 text-white focus:outline-none focus:border-[var(--copa-gold)] transition-colors"
+          className="campo campo-placar"
         />
       </div>
 
       {/* Encerrada */}
-      <label className="flex items-center gap-2 mb-3 cursor-pointer">
+      <label className="mb-3 flex cursor-pointer items-center gap-2">
         <input
           type="checkbox"
           checked={encerrada}
           onChange={e => setEncerrada(e.target.checked)}
-          className="w-4 h-4 accent-[var(--copa-gold)]"
+          className="h-4 w-4 accent-[var(--copa-gold)]"
         />
-        <span className="text-sm text-white/60">Partida encerrada</span>
+        <span className="text-sm text-[var(--mist)]">Partida encerrada</span>
       </label>
 
-      {erro && <p className="text-[var(--copa-red)] text-xs mb-2">{erro}</p>}
+      {erro && <p className="mb-2 text-xs text-[var(--copa-red)]">{erro}</p>}
 
       <button
         onClick={handleSalvar}
         disabled={salvando}
-        className={`w-full py-2 rounded-lg font-bold text-sm transition-all ${
-          salvo
-            ? 'bg-green-600 text-white'
-            : 'bg-[var(--copa-gold)] text-black hover:brightness-110 disabled:opacity-40'
-        }`}
+        className={`btn btn-block text-sm ${salvo ? 'btn-ok' : 'btn-gold'}`}
       >
         {salvando ? 'Salvando...' : salvo ? '✓ Salvo' : 'Salvar'}
       </button>

@@ -43,3 +43,54 @@ body {
 /* Utilitários usados pelos componentes */
 .font-display { font-family: var(--font-display); letter-spacing: .04em; }
 .tnum { font-variant-numeric: tabular-nums; }
+
+/* ───────────────────────────────────────────────────────────
+   Componentes de formulário — usados por todos os forms do app.
+   ─────────────────────────────────────────────────────────── */
+
+/* Inputs e selects */
+.campo {
+  width: 100%;
+  background: var(--turf);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 0.75rem 1rem;
+  color: var(--chalk);
+  font-family: var(--font-ui);
+  transition: border-color .15s;
+}
+.campo::placeholder { color: var(--mist); }
+.campo:focus { outline: none; border-color: var(--copa-gold); }
+
+/* Variante "placar": inputs de gols, grandes e tabulares */
+.campo-placar {
+  text-align: center;
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  padding: 0.5rem;
+}
+
+/* Botões com profundidade (efeito de afundar ao apertar) */
+.btn {
+  border: none;
+  border-radius: 12px;
+  padding: 0.75rem 1rem;
+  font-family: var(--font-ui);
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform .06s, box-shadow .06s, filter .15s;
+}
+.btn-block { width: 100%; }
+.btn-sm { padding: 0.5rem 1rem; font-size: 0.875rem; }
+.btn:disabled { opacity: .4; cursor: default; }
+
+.btn-gold { background: var(--copa-gold); color: #0A130F; box-shadow: 0 4px 0 0 #B8862A; }
+.btn-gold:active:not(:disabled) { transform: translateY(3px); box-shadow: 0 1px 0 0 #B8862A; }
+
+.btn-blue { background: var(--copa-blue); color: #fff; box-shadow: 0 4px 0 0 #1B49C4; }
+.btn-blue:active:not(:disabled) { transform: translateY(3px); box-shadow: 0 1px 0 0 #1B49C4; }
+
+.btn-ok { background: #1F9D63; color: #fff; box-shadow: 0 4px 0 0 #156B44; }
+.btn-ok:active:not(:disabled) { transform: translateY(3px); box-shadow: 0 1px 0 0 #156B44; }

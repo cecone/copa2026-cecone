@@ -35,23 +35,23 @@ export default function FormPalpiteEspecial({ grupoId, selecoes, palpiteAtual }:
   }
 
   return (
-    <div className="bg-[var(--surface)] rounded-xl border border-[var(--copa-gold)]/30 overflow-hidden mb-8">
+    <div className="mb-8 overflow-hidden rounded-2xl border border-[var(--copa-gold)]/30 bg-[var(--turf)]">
       {/* Cabeçalho */}
-      <div className="bg-[var(--copa-gold)]/10 px-4 py-3 border-b border-[var(--copa-gold)]/20 flex items-center gap-2">
-        <span className="text-[var(--copa-gold)] text-base">★</span>
-        <h3 className="text-sm font-bold text-[var(--copa-gold)] uppercase tracking-wider">
+      <div className="flex items-center gap-2 border-b border-[var(--copa-gold)]/20 bg-[var(--copa-gold)]/10 px-4 py-3">
+        <span className="text-base text-[var(--copa-gold)]">★</span>
+        <h3 className="font-display text-sm font-bold uppercase tracking-wider text-[var(--copa-gold)]">
           Palpites Especiais
         </h3>
       </div>
 
-      <div className="p-4 flex flex-col gap-5">
+      <div className="flex flex-col gap-5 p-4">
         {/* Campeão */}
         <div>
-          <label className="text-xs text-white/40 uppercase tracking-wider font-semibold block mb-2">
+          <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-[var(--mist)]">
             Campeão da Copa
           </label>
           <div className="flex items-center gap-3">
-            <div className="shrink-0 w-8 h-6 flex items-center justify-center">
+            <div className="flex h-6 w-8 shrink-0 items-center justify-center">
               {campeaoSelecionado ? (
                 <Bandeira
                   codigo={campeaoSelecionado.codigo}
@@ -60,13 +60,13 @@ export default function FormPalpiteEspecial({ grupoId, selecoes, palpiteAtual }:
                   tamanho="md"
                 />
               ) : (
-                <span className="text-white/20 text-xl">?</span>
+                <span className="text-xl text-[var(--mist)]">?</span>
               )}
             </div>
             <select
               value={campeaoId}
               onChange={e => setCampeaoId(e.target.value)}
-              className="flex-1 bg-[var(--background)] border border-white/20 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-[var(--copa-gold)] transition-colors appearance-none cursor-pointer"
+              className="campo flex-1 cursor-pointer appearance-none text-sm"
             >
               <option value="">Escolha uma seleção…</option>
               {selecoes.map(s => (
@@ -80,16 +80,12 @@ export default function FormPalpiteEspecial({ grupoId, selecoes, palpiteAtual }:
         <button
           onClick={handleSalvar}
           disabled={salvando || !campeaoId}
-          className={`w-full py-2.5 rounded-lg font-bold text-sm transition-all ${
-            salvo
-              ? 'bg-green-600 text-white'
-              : 'bg-[var(--copa-gold)] text-black hover:brightness-110 disabled:opacity-40'
-          }`}
+          className={`btn btn-block ${salvo ? 'btn-ok' : 'btn-gold'}`}
         >
           {salvando ? 'Salvando…' : salvo ? '✓ Salvo!' : 'Salvar palpites especiais'}
         </button>
 
-        {erro && <p className="text-[var(--copa-red)] text-xs">{erro}</p>}
+        {erro && <p className="text-xs text-[var(--copa-red)]">{erro}</p>}
       </div>
     </div>
   )
