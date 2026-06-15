@@ -608,6 +608,7 @@ async function sincronizarStats(admin: ReturnType<typeof createAdminClient>) {
   // Mapa "CASACODE|FORACODE" → ID real da API
   const apiIdPorTimes = new Map<string, number>()
   for (const ap of apiPartidas) {
+    if (!ap.home_team || !ap.away_team) continue
     const casaCodigo = ap.home_team_code ?? codigoDoNome(ap.home_team)
     const foraCodigo = ap.away_team_code ?? codigoDoNome(ap.away_team)
     apiIdPorTimes.set(`${casaCodigo}|${foraCodigo}`, ap.id)
