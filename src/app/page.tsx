@@ -1,8 +1,10 @@
+import { Suspense } from 'react'
 import { createClient } from '@/lib/supabase-server'
 import BotaoLogin from '@/components/BotaoLogin'
 import BotaoLogout from '@/components/BotaoLogout'
 import LogoApp from '@/components/LogoApp'
 import HeroProximoJogo from '@/components/HeroProximoJogo'
+import RoundelLoader from '@/components/RoundelLoader'
 import Link from 'next/link'
 
 export const revalidate = 30 // mantém o herói fresco
@@ -51,7 +53,9 @@ export default async function Home() {
 
         {/* Herói: jogo ao vivo ou próximo jogo (some sozinho se não houver) */}
         <div className="mt-8 w-full">
-          <HeroProximoJogo />
+          <Suspense fallback={<div className="flex justify-center py-10"><RoundelLoader tamanho="lg" /></div>}>
+            <HeroProximoJogo />
+          </Suspense>
         </div>
 
         {/* Navegação principal como cartões */}
