@@ -650,8 +650,14 @@ async function sincronizarStats(admin: ReturnType<typeof createAdminClient>) {
     }
 
     const json = await res.json()
-    // Log estrutura bruta para diagnosticar mapeamento de campos
-    if (salvos === 0) console.log(`[sincronizar/stats] raw JSON (${casaCodigo} vs ${foraCodigo}):`, JSON.stringify(json).slice(0, 800))
+    // Salva JSON bruto no banco para diagnóstico (primeira resposta bem-sucedida)
+    if (salvos === 0) {
+      console.log(`[sincronizar/stats] raw JSON (${casaCodigo} vs ${foraCodigo}):`, JSON.stringify(json).slice(0, 800))
+      await admin.from('configuracoes').upsert(
+        { chave: 'debug_stats_raw', valor: JSON.stringify({ jogo: `${casaCodigo}|${foraCodigo}`, apiId, json }) },
+        { onConflict: 'chave' }
+      )
+    }
     const s: WC2026Stats = json.data ?? json
 
     // Não salvar se a API retornou um objeto sem nenhum dado útil
