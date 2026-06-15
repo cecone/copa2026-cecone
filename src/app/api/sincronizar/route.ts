@@ -650,52 +650,46 @@ async function sincronizarStats(admin: ReturnType<typeof createAdminClient>) {
     }
 
     const json = await res.json()
-    // Salva JSON bruto no banco para diagnóstico (primeira resposta bem-sucedida)
-    if (salvos === 0) {
-      console.log(`[sincronizar/stats] raw JSON (${casaCodigo} vs ${foraCodigo}):`, JSON.stringify(json).slice(0, 800))
-      await admin.from('configuracoes').upsert(
-        { chave: 'debug_stats_raw', valor: JSON.stringify({ jogo: `${casaCodigo}|${foraCodigo}`, apiId, json }) },
-        { onConflict: 'chave' }
-      )
-    }
-    const s: WC2026Stats = json.data ?? json
+    // Estrutura real: { match_id, stats: {...}, timeline: [...] }
+    const s = json.stats as WC2026Stats | undefined
+    const timeline: WC2026StatsEvent[] = json.timeline ?? []
 
-    // Não salvar se a API retornou um objeto sem nenhum dado útil
-    const temDados = s.home_possession != null || s.home_shots_on_target != null ||
-      s.home_corners != null || s.home_fouls != null || (s.events?.length ?? 0) > 0
+    // Não salvar se a API retornou resposta sem dados úteis
+    const temDados = s && (s.home_possession != null || s.home_shots_on_target != null ||
+      s.home_corners != null || s.home_fouls != null || timeline.length > 0)
     if (!temDados) {
       console.log(`[sincronizar/stats] jogo ${apiId} (${casaCodigo} vs ${foraCodigo}): sem dados úteis, pulando`)
       continue
     }
 
-    const eventos = (s.events ?? [])
+    const eventos = timeline
       .map(ev => {
         const tipo = mapTipoEvento(ev.type)
         if (!tipo) return null
         return {
           tipo,
           minuto: ev.minute,
-          acrescimo: ev.stoppage ?? null,
+          acrescimo: ev.extra ?? null,
           jogador: ev.player,
-          time_codigo: ev.team_code,
+          time_codigo: ev.team,
         }
       })
       .filter(Boolean)
 
     await admin.from('partida_stats').upsert({
       partida_id: partida.id,
-      posse_casa: s.home_possession ?? null,
-      posse_fora: s.away_possession ?? null,
-      chutes_alvo_casa: s.home_shots_on_target ?? null,
-      chutes_alvo_fora: s.away_shots_on_target ?? null,
-      escanteios_casa: s.home_corners ?? null,
-      escanteios_fora: s.away_corners ?? null,
-      faltas_casa: s.home_fouls ?? null,
-      faltas_fora: s.away_fouls ?? null,
-      amarelos_casa: s.home_yellow_cards ?? null,
-      amarelos_fora: s.away_yellow_cards ?? null,
-      vermelhos_casa: s.home_red_cards ?? null,
-      vermelhos_fora: s.away_red_cards ?? null,
+      posse_casa: s?.home_possession ?? null,
+      posse_fora: s?.away_possession ?? null,
+      chutes_alvo_casa: s?.home_shots_on_target ?? null,
+      chutes_alvo_fora: s?.away_shots_on_target ?? null,
+      escanteios_casa: s?.home_corners ?? null,
+      escanteios_fora: s?.away_corners ?? null,
+      faltas_casa: s?.home_fouls ?? null,
+      faltas_fora: s?.away_fouls ?? null,
+      amarelos_casa: s?.home_yellows ?? null,
+      amarelos_fora: s?.away_yellows ?? null,
+      vermelhos_casa: s?.home_reds ?? null,
+      vermelhos_fora: s?.away_reds ?? null,
       eventos,
       atualizado_em: new Date().toISOString(),
     }, { onConflict: 'partida_id' })
@@ -757,9 +751,9 @@ type WC2026Match = {
 type WC2026StatsEvent = {
   type: string
   minute: number
-  stoppage?: number | null
+  extra?: number | null
   player: string
-  team_code: string
+  team: string
 }
 
 type WC2026Stats = {
@@ -767,9 +761,8 @@ type WC2026Stats = {
   home_shots_on_target?: number;   away_shots_on_target?: number
   home_corners?: number;           away_corners?: number
   home_fouls?: number;             away_fouls?: number
-  home_yellow_cards?: number;      away_yellow_cards?: number
-  home_red_cards?: number;         away_red_cards?: number
-  events?: WC2026StatsEvent[]
+  home_yellows?: number;           away_yellows?: number
+  home_reds?: number;              away_reds?: number
 }
 
 type WC2026Standing = {
