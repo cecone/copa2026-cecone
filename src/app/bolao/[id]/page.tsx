@@ -5,6 +5,7 @@ import { redirect, notFound } from 'next/navigation'
 import Link from 'next/link'
 import FormPalpite from '@/components/FormPalpite'
 import FormPalpiteEspecial from '@/components/FormPalpiteEspecial'
+import Rodada from '@/components/Rodada'
 import { Partida } from '@/types'
 
 type Props = {
@@ -27,7 +28,7 @@ function rowToPartida(row: PartidaRow): Partida {
   return {
     id: row.id,
     fase: row.fase,
-    data: dt.toISOString().slice(0, 10),
+    data: dt.toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' }), // YYYY-MM-DD no fuso BR
     hora: dt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' }),
     selecao_casa: selCasa
       ? { id: selCasa.id, nome: selCasa.nome, codigo: selCasa.codigo, bandeira: selCasa.bandeira }
@@ -40,6 +41,22 @@ function rowToPartida(row: PartidaRow): Partida {
     status: row.status as Partida['status'],
     minuto: row.minuto ?? undefined,
   }
+}
+
+// Rodada da fase de grupos a partir da data (fuso BR, comparação por string YYYY-MM-DD)
+function rodadaGrupo(data: string): number {
+  if (data <= '2026-06-16') return 1 // Rodada 1: 11–16/jun
+  if (data <= '2026-06-22') return 2 // Rodada 2: 17–22/jun
+  return 3                           // Rodada 3: 23–28/jun
+}
+
+// Pontos do usuário em UM palpite (mesma regra do ranking: 7 cravou / 3 resultado / 0)
+function pontosPalpite(p: Partida, palpite?: { gols_casa: number; gols_fora: number } | null): number {
+  if (p.status !== 'encerrada' || !palpite) return 0
+  if (p.gols_casa === null || p.gols_fora === null) return 0
+  if (palpite.gols_casa === p.gols_casa && palpite.gols_fora === p.gols_fora) return 7
+  if (Math.sign(p.gols_casa - p.gols_fora) === Math.sign(palpite.gols_casa - palpite.gols_fora)) return 3
+  return 0
 }
 
 export default async function GrupoBolaoPage({ params }: Props) {
@@ -131,6 +148,15 @@ export default async function GrupoBolaoPage({ params }: Props) {
     .eq('user_id', user.id)
     .single()
 
+  // Agrupa as partidas por rodada (1, 2, 3) calculada pela data
+  const porRodada = new Map<number, Partida[]>()
+  for (const p of partidas) {
+    const r = rodadaGrupo(p.data)
+    if (!porRodada.has(r)) porRodada.set(r, [])
+    porRodada.get(r)!.push(p)
+  }
+  const rodadas = Array.from(porRodada.keys()).sort((a, b) => a - b)
+
   return (
     <div className="min-h-screen px-4 pb-16 pt-6 sm:px-8">
       <div className="mx-auto max-w-lg">
@@ -203,20 +229,39 @@ export default async function GrupoBolaoPage({ params }: Props) {
           palpiteAtual={palpiteEspecial ?? null}
         />
 
-        {/* Palpites */}
+        {/* Palpites agrupados por rodada */}
         <h2 className="mb-4 font-display text-xl font-bold uppercase text-[var(--chalk)]">Seus palpites</h2>
         {partidas.length === 0 ? (
           <p className="text-sm text-[var(--mist)]">Os jogos ainda não foram carregados.</p>
         ) : (
           <div className="flex flex-col gap-3">
-            {partidas.map(partida => (
-              <FormPalpite
-                key={partida.id}
-                partida={partida}
-                grupoId={id}
-                palpiteAtual={palpitePorPartida[partida.id] ?? null}
-              />
-            ))}
+            {rodadas.map(r => {
+              const jogos = porRodada.get(r)!
+              const abertos = jogos.filter(j => j.status === 'agendada').length
+              const todasEncerradas = jogos.every(j => j.status === 'encerrada')
+              const pontosRodada = jogos.reduce((acc, j) => acc + pontosPalpite(j, palpitePorPartida[j.id]), 0)
+              const sub = abertos > 0
+                ? `${jogos.length} jogos · ${abertos} a palpitar`
+                : `${jogos.length} jogos`
+              return (
+                <Rodada
+                  key={r}
+                  titulo={`Rodada ${r}`}
+                  subtitulo={sub}
+                  pontos={pontosRodada}
+                  defaultAberta={!todasEncerradas}
+                >
+                  {jogos.map(partida => (
+                    <FormPalpite
+                      key={partida.id}
+                      partida={partida}
+                      grupoId={id}
+                      palpiteAtual={palpitePorPartida[partida.id] ?? null}
+                    />
+                  ))}
+                </Rodada>
+              )
+            })}
           </div>
         )}
       </div>
