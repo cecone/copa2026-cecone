@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import LogoApp from '@/components/LogoApp'
 import Link from 'next/link'
 import CardEliminatoria from '@/components/CardEliminatoria'
+import BracketView from '@/components/BracketView'
 import { PartidaEliminatoria } from '@/lib/dados-mock'
 import { FaseEliminatoria } from '@/types'
 import { createClient } from '@/lib/supabase'
@@ -60,6 +61,7 @@ function rowToEliminatoria(row: PartidaRow, jogo: number): PartidaEliminatoria {
 }
 
 export default function ChaveamentoPage() {
+  const [vista, setVista] = useState<'bracket' | 'lista'>('bracket')
   const [faseSelecionada, setFaseSelecionada] = useState<FaseEliminatoria | 'todas'>('todas')
   const [partidas, setPartidas] = useState<PartidaEliminatoria[]>([])
 
@@ -99,7 +101,7 @@ export default function ChaveamentoPage() {
 
   return (
     <div className="min-h-screen px-4 pb-16 pt-6 sm:px-8">
-      <div className="mx-auto max-w-2xl">
+      <div className={`mx-auto ${vista === 'bracket' ? 'max-w-5xl' : 'max-w-2xl'}`}>
         <header className="mb-8 flex items-center justify-between">
           <Link href="/" className="inline-flex items-center gap-2 text-sm text-[var(--mist)] transition-colors hover:text-[var(--chalk)]">
             <span aria-hidden>←</span> Início
@@ -107,26 +109,35 @@ export default function ChaveamentoPage() {
           <LogoApp horizontal />
         </header>
 
-        <div className="mb-6">
-          <p className="mb-1 text-[11px] uppercase tracking-[0.18em] text-[var(--mist)]">Copa do Mundo 2026</p>
-          <h1 className="font-display text-4xl font-bold uppercase text-[var(--chalk)]">Mata-mata</h1>
-        </div>
+        <div className="mb-6 flex items-end justify-between gap-4">
+          <div>
+            <p className="mb-1 text-[11px] uppercase tracking-[0.18em] text-[var(--mist)]">Copa do Mundo 2026</p>
+            <h1 className="font-display text-4xl font-bold uppercase text-[var(--chalk)]">Mata-mata</h1>
+          </div>
 
-        {/* Filtro de fases */}
-        <div className="scrollbar-none mb-8 flex gap-2 overflow-x-auto pb-2">
-          {fases.map(f => (
+          {/* Toggle Bracket / Lista */}
+          <div className="flex shrink-0 overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--turf)]">
             <button
-              key={f.id}
-              onClick={() => setFaseSelecionada(f.id)}
-              className={`whitespace-nowrap rounded-full px-4 py-1.5 text-sm font-semibold transition-colors ${
-                faseSelecionada === f.id
+              onClick={() => setVista('bracket')}
+              className={`px-3 py-1.5 text-xs font-semibold transition-colors ${
+                vista === 'bracket'
                   ? 'bg-[var(--copa-gold)] text-[#0A130F]'
-                  : 'border border-[var(--line)] bg-[var(--turf)] text-[var(--mist)] hover:border-[var(--mist)]'
+                  : 'text-[var(--mist)] hover:text-[var(--chalk)]'
               }`}
             >
-              {f.label}
+              Bracket
             </button>
-          ))}
+            <button
+              onClick={() => setVista('lista')}
+              className={`px-3 py-1.5 text-xs font-semibold transition-colors ${
+                vista === 'lista'
+                  ? 'bg-[var(--copa-gold)] text-[#0A130F]'
+                  : 'text-[var(--mist)] hover:text-[var(--chalk)]'
+              }`}
+            >
+              Lista
+            </button>
+          </div>
         </div>
 
         {partidas.length === 0 && (
@@ -139,23 +150,49 @@ export default function ChaveamentoPage() {
           </div>
         )}
 
-        {/* Partidas por fase */}
-        {(Object.keys(porFase) as FaseEliminatoria[]).map(fase => {
-          const items = porFase[fase]
-          if (items.length === 0) return null
-          return (
-            <div key={fase} className="mb-8">
-              {faseSelecionada === 'todas' && (
-                <h2 className="mb-3 font-display text-sm font-bold uppercase tracking-wider text-[var(--mist)]">
-                  {labelFase[fase]}
-                </h2>
-              )}
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                {items.map(p => <CardEliminatoria key={p.id} partida={p} />)}
-              </div>
+        {/* Vista: Bracket */}
+        {vista === 'bracket' && partidas.length > 0 && (
+          <BracketView partidas={partidas} />
+        )}
+
+        {/* Vista: Lista */}
+        {vista === 'lista' && partidas.length > 0 && (
+          <>
+            {/* Filtro de fases */}
+            <div className="scrollbar-none mb-8 flex gap-2 overflow-x-auto pb-2">
+              {fases.map(f => (
+                <button
+                  key={f.id}
+                  onClick={() => setFaseSelecionada(f.id)}
+                  className={`whitespace-nowrap rounded-full px-4 py-1.5 text-sm font-semibold transition-colors ${
+                    faseSelecionada === f.id
+                      ? 'bg-[var(--copa-gold)] text-[#0A130F]'
+                      : 'border border-[var(--line)] bg-[var(--turf)] text-[var(--mist)] hover:border-[var(--mist)]'
+                  }`}
+                >
+                  {f.label}
+                </button>
+              ))}
             </div>
-          )
-        })}
+
+            {(Object.keys(porFase) as FaseEliminatoria[]).map(fase => {
+              const items = porFase[fase]
+              if (items.length === 0) return null
+              return (
+                <div key={fase} className="mb-8">
+                  {faseSelecionada === 'todas' && (
+                    <h2 className="mb-3 font-display text-sm font-bold uppercase tracking-wider text-[var(--mist)]">
+                      {labelFase[fase]}
+                    </h2>
+                  )}
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    {items.map(p => <CardEliminatoria key={p.id} partida={p} />)}
+                  </div>
+                </div>
+              )
+            })}
+          </>
+        )}
       </div>
     </div>
   )
