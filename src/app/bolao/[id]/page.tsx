@@ -45,9 +45,9 @@ function rowToPartida(row: PartidaRow): Partida {
 
 // Rodada da fase de grupos a partir da data (fuso BR, comparação por string YYYY-MM-DD)
 function rodadaGrupo(data: string): number {
-  if (data <= '2026-06-16') return 1 // Rodada 1: 11–16/jun
-  if (data <= '2026-06-22') return 2 // Rodada 2: 17–22/jun
-  return 3                           // Rodada 3: 23–28/jun
+  if (data <= '2026-06-17') return 1 // Rodada 1: 11–17/jun
+  if (data <= '2026-06-23') return 2 // Rodada 2: 18–23/jun
+  return 3                           // Rodada 3: 24–27/jun
 }
 
 // Pontos do usuário em UM palpite (mesma regra do ranking: 7 cravou / 3 resultado / 0)
