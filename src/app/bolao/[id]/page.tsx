@@ -131,6 +131,33 @@ export default async function GrupoBolaoPage({ params }: Props) {
     })
   )
 
+  // Palpites do grupo por partida — apenas para jogos já iniciados (privacidade real)
+  const partidaPorId = new Map(partidas.map(p => [p.id, p]))
+  const palpitesGrupoPorPartida = new Map<number, {
+    nome: string; gols_casa: number; gols_fora: number; pontos: number | null; euMesmo: boolean
+  }[]>()
+  for (const palp of todosPalpites ?? []) {
+    const partida = partidaPorId.get(palp.partida_id)
+    if (!partida || partida.status === 'agendada') continue
+    const lista = palpitesGrupoPorPartida.get(palp.partida_id) ?? []
+    lista.push({
+      nome: nomesPorId.get(palp.user_id) ?? 'Participante',
+      gols_casa: palp.gols_casa,
+      gols_fora: palp.gols_fora,
+      pontos: partida.status === 'encerrada' ? pontosPalpite(partida, palp) : null,
+      euMesmo: palp.user_id === user.id,
+    })
+    palpitesGrupoPorPartida.set(palp.partida_id, lista)
+  }
+  // Ordenação: euMesmo primeiro, depois pontos desc, depois nome asc
+  for (const lista of palpitesGrupoPorPartida.values()) {
+    lista.sort((a, b) => {
+      if (a.euMesmo !== b.euMesmo) return a.euMesmo ? -1 : 1
+      if ((b.pontos ?? 0) !== (a.pontos ?? 0)) return (b.pontos ?? 0) - (a.pontos ?? 0)
+      return a.nome.localeCompare(b.nome)
+    })
+  }
+
   const { data: selecoesRaw } = await admin
     .from('selecoes')
     .select('id, nome, codigo, bandeira')
@@ -257,6 +284,7 @@ export default async function GrupoBolaoPage({ params }: Props) {
                       partida={partida}
                       grupoId={id}
                       palpiteAtual={palpitePorPartida[partida.id] ?? null}
+                      palpitesGrupo={palpitesGrupoPorPartida.get(partida.id) ?? []}
                     />
                   ))}
                 </Rodada>

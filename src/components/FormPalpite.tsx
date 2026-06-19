@@ -5,13 +5,23 @@ import { salvarPalpite } from '@/app/bolao/actions'
 import Bandeira from './Bandeira'
 import { Partida } from '@/types'
 
+type PalpiteGrupo = {
+  nome: string
+  gols_casa: number
+  gols_fora: number
+  pontos: number | null // null = jogo ao vivo (ainda não pontuado)
+  euMesmo: boolean
+}
+
 type Props = {
   partida: Partida
   grupoId: string
   palpiteAtual?: { gols_casa: number; gols_fora: number } | null
+  /** Palpites de todos os participantes — só vem preenchido após o jogo começar */
+  palpitesGrupo?: PalpiteGrupo[]
 }
 
-export default function FormPalpite({ partida, grupoId, palpiteAtual }: Props) {
+export default function FormPalpite({ partida, grupoId, palpiteAtual, palpitesGrupo }: Props) {
   const [casa, setCasa] = useState(palpiteAtual?.gols_casa ?? '')
   const [fora, setFora] = useState(palpiteAtual?.gols_fora ?? '')
   const [salvando, setSalvando] = useState(false)
@@ -120,23 +130,9 @@ export default function FormPalpite({ partida, grupoId, palpiteAtual }: Props) {
         /* ABERTA PARA PALPITE */
         <>
           <div className="flex items-center gap-3">
-            <input
-              type="number"
-              min={0}
-              max={20}
-              value={casa}
-              onChange={e => setCasa(e.target.value)}
-              className="campo campo-placar"
-            />
+            <input type="number" min={0} max={20} value={casa} onChange={e => setCasa(e.target.value)} className="campo campo-placar" />
             <span className="text-lg font-light text-[var(--mist)]">×</span>
-            <input
-              type="number"
-              min={0}
-              max={20}
-              value={fora}
-              onChange={e => setFora(e.target.value)}
-              className="campo campo-placar"
-            />
+            <input type="number" min={0} max={20} value={fora} onChange={e => setFora(e.target.value)} className="campo campo-placar" />
             <button
               onClick={handleSalvar}
               disabled={salvando || casa === '' || fora === ''}
@@ -146,7 +142,37 @@ export default function FormPalpite({ partida, grupoId, palpiteAtual }: Props) {
             </button>
           </div>
           {erro && <p className="mt-2 text-xs text-[var(--copa-red)]">{erro}</p>}
+          <p className="mt-3 text-center text-xs text-[var(--mist)]">
+            🔒 Os palpites do grupo aparecem no apito inicial
+          </p>
         </>
+      )}
+
+      {/* Palpites do grupo — só aparece depois que o jogo começa */}
+      {palpitesGrupo && palpitesGrupo.length > 0 && (
+        <div className="mt-3 border-t border-[var(--line)] pt-3">
+          <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-[var(--mist)]">
+            Palpites do grupo · {palpitesGrupo.length}
+          </p>
+          <div className="flex flex-col">
+            {palpitesGrupo.map((pg, i) => (
+              <div
+                key={i}
+                className={`flex items-center justify-between rounded-lg px-2 py-1.5 ${pg.euMesmo ? 'bg-[var(--copa-blue)]/10' : ''}`}
+              >
+                <span className={`truncate text-sm ${pg.euMesmo ? 'font-semibold text-[var(--chalk)]' : 'text-[var(--mist)]'}`}>
+                  {pg.euMesmo ? 'Você' : pg.nome}
+                </span>
+                <span className="flex shrink-0 items-center gap-2">
+                  <span className="tnum font-display text-sm font-bold text-[var(--chalk)]">
+                    {pg.gols_casa} – {pg.gols_fora}
+                  </span>
+                  {pg.pontos !== null && <PontosChip pontos={pg.pontos} />}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
       )}
     </div>
   )
@@ -167,4 +193,14 @@ function PontosBadge({ pontos }: { pontos: number }) {
       <span className="text-xs text-[var(--mist)]">· {cfg.label}</span>
     </div>
   )
+}
+
+function PontosChip({ pontos }: { pontos: number }) {
+  const c =
+    pontos === 7
+      ? 'text-[var(--copa-gold)] bg-[var(--copa-gold)]/10'
+      : pontos === 3
+      ? 'text-emerald-400 bg-emerald-400/10'
+      : 'text-[var(--mist)] bg-[var(--turf-2)]'
+  return <span className={`tnum rounded px-1.5 py-0.5 text-[10px] font-bold ${c}`}>+{pontos}</span>
 }
