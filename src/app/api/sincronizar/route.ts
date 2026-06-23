@@ -70,6 +70,11 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ ok: true, tipo: 'stats', ...r })
     }
 
+    if (tipo === 'chaveamento') {
+      const r = await sincronizarChaveamento(admin)
+      return NextResponse.json({ ok: true, tipo: 'chaveamento', ...r })
+    }
+
     if (tipo === 'partidas' || tipo === 'tudo') {
       await sincronizarPartidas(admin)
     }
@@ -290,7 +295,7 @@ async function seedClassificacaoInicial(
 // Limite: 100 req/dia. Travamos em 90 para deixar margem.
 // ================================================================
 const LIMITE_DIARIO = 90
-const COOLDOWN_PADRAO_S = 10 * 60 // 10 minutos se a API não informar next_phase_in_seconds
+const COOLDOWN_PADRAO_S = 5 * 60 // 5 minutos se a API não informar next_phase_in_seconds
 
 async function getRateState(admin: ReturnType<typeof createAdminClient>) {
   const hoje = new Date().toISOString().slice(0, 10) // YYYY-MM-DD UTC
@@ -388,6 +393,9 @@ async function sincronizarVivo(admin: ReturnType<typeof createAdminClient>) {
 
   // Recalcular classificação a partir das partidas encerradas no banco (sem custo de API)
   await recalcularClassificacao(admin)
+
+  // Atualizar slots do chaveamento com os líderes atuais dos grupos
+  await sincronizarChaveamento(admin)
 
   return { pulado: false, requisicoes_hoje: limite.count + 1, proximo_em_s: nextPhaseSeconds }
 }
@@ -565,6 +573,77 @@ async function sincronizarClassificacao(admin: ReturnType<typeof createAdminClie
       pontos: entrada.points ?? 0,
     }, { onConflict: 'selecao_id' })
   }
+}
+
+// ================================================================
+// CHAVEAMENTO: preenche seleções classificadas na Rodada de 32
+// ================================================================
+
+// Bracket da R32 baseado no openfootball (worldcup.json 2026).
+// casa/fora: { grupo, pos } = posição no grupo | null = 3º lugar (a definir)
+const BRACKET_R32 = [
+  { num: 73, date: '2026-06-28', casa: { grupo: 'A', pos: 2 }, fora: { grupo: 'B', pos: 2 } },
+  { num: 74, date: '2026-06-29', casa: { grupo: 'E', pos: 1 }, fora: null },               // 3º A/B/C/D/F
+  { num: 75, date: '2026-06-29', casa: { grupo: 'F', pos: 1 }, fora: { grupo: 'C', pos: 2 } },
+  { num: 76, date: '2026-06-29', casa: { grupo: 'C', pos: 1 }, fora: { grupo: 'F', pos: 2 } },
+  { num: 77, date: '2026-06-30', casa: { grupo: 'I', pos: 1 }, fora: null },               // 3º C/D/F/G/H
+  { num: 78, date: '2026-06-30', casa: { grupo: 'E', pos: 2 }, fora: { grupo: 'I', pos: 2 } },
+  { num: 79, date: '2026-06-30', casa: { grupo: 'A', pos: 1 }, fora: null },               // 3º C/E/F/H/I
+  { num: 80, date: '2026-07-01', casa: { grupo: 'L', pos: 1 }, fora: null },               // 3º E/H/I/J/K
+  { num: 81, date: '2026-07-01', casa: { grupo: 'D', pos: 1 }, fora: null },               // 3º B/E/F/I/J
+  { num: 82, date: '2026-07-01', casa: { grupo: 'G', pos: 1 }, fora: null },               // 3º A/E/H/I/J
+  { num: 83, date: '2026-07-02', casa: { grupo: 'K', pos: 2 }, fora: { grupo: 'L', pos: 2 } },
+  { num: 84, date: '2026-07-02', casa: { grupo: 'H', pos: 1 }, fora: { grupo: 'J', pos: 2 } },
+  { num: 85, date: '2026-07-02', casa: { grupo: 'B', pos: 1 }, fora: null },               // 3º E/F/G/I/J
+  { num: 86, date: '2026-07-03', casa: { grupo: 'J', pos: 1 }, fora: { grupo: 'H', pos: 2 } },
+  { num: 87, date: '2026-07-03', casa: { grupo: 'K', pos: 1 }, fora: null },               // 3º D/E/I/J/L
+  { num: 88, date: '2026-07-03', casa: { grupo: 'D', pos: 2 }, fora: { grupo: 'G', pos: 2 } },
+]
+
+async function sincronizarChaveamento(admin: ReturnType<typeof createAdminClient>) {
+  // Classificação atual de todos os grupos
+  const { data: classificacao } = await admin
+    .from('classificacao_grupos')
+    .select('selecao_id, grupo, posicao')
+
+  if (!classificacao?.length) return { atualizados: 0, motivo: 'sem_classificacao' }
+
+  // Mapa "A|1" → selecao_id (primeiro encontrado por grupo+posição)
+  const mapaGrupoPos = new Map<string, number>()
+  for (const row of classificacao) {
+    const chave = `${row.grupo}|${row.posicao}`
+    if (!mapaGrupoPos.has(chave)) mapaGrupoPos.set(chave, row.selecao_id)
+  }
+
+  let atualizados = 0
+  const detalhes: string[] = []
+
+  for (const slot of BRACKET_R32) {
+    const casaId = slot.casa ? (mapaGrupoPos.get(`${slot.casa.grupo}|${slot.casa.pos}`) ?? null) : null
+    const foraId = slot.fora ? (mapaGrupoPos.get(`${slot.fora.grupo}|${slot.fora.pos}`) ?? null) : null
+
+    if (casaId === null && foraId === null) continue
+
+    const partidaId = hashPartidaId(`${slot.date}|Round of 32|${slot.num}`)
+    const update: Record<string, number | null> = {}
+    if (casaId !== null) update.selecao_casa_id = casaId
+    if (foraId !== null) update.selecao_fora_id = foraId
+
+    const { error } = await admin
+      .from('partidas')
+      .update(update)
+      .eq('id', partidaId)
+      .eq('fase_tipo', 'rodada32')
+
+    if (error) {
+      detalhes.push(`jogo ${slot.num}: erro — ${error.message}`)
+    } else {
+      atualizados++
+      detalhes.push(`jogo ${slot.num}: ok`)
+    }
+  }
+
+  return { atualizados, total: BRACKET_R32.length, detalhes }
 }
 
 function mapTipoEvento(t: string): 'gol' | 'gol_contra' | 'amarelo' | 'vermelho' | null {
