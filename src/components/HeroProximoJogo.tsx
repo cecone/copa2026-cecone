@@ -26,16 +26,15 @@ const COLUNAS = `
 export default async function HeroProximoJogo() {
   const supabase = await createClient()
 
-  // 1) Tem jogo ao vivo?
-  let { data } = await supabase
+  // 1) Jogos ao vivo (sem limit — pode haver 2 simultâneos na Rodada 3)
+  let { data: vivos } = await supabase
     .from('partidas')
     .select(COLUNAS)
     .eq('status', 'ao_vivo')
     .order('data_hora', { ascending: true })
-    .limit(1)
 
   // 2) Senão, o próximo agendado
-  if (!data || data.length === 0) {
+  if (!vivos || vivos.length === 0) {
     const r = await supabase
       .from('partidas')
       .select(COLUNAS)
@@ -43,12 +42,64 @@ export default async function HeroProximoJogo() {
       .gte('data_hora', new Date().toISOString())
       .order('data_hora', { ascending: true })
       .limit(1)
-    data = r.data
+    vivos = r.data
   }
 
-  const row = (data?.[0] as unknown as Row) ?? null
-  if (!row) return null
+  if (!vivos || vivos.length === 0) return null
 
+  // Múltiplos jogos ao vivo → card resumido
+  if (vivos.length > 1) {
+    const jogos = vivos.map(r => r as unknown as Row)
+    return (
+      <Link
+        href="/partidas"
+        className="group relative block w-full overflow-hidden rounded-3xl border border-[var(--copa-red)]/60 bg-gradient-to-b from-[var(--turf-2)] to-[var(--turf)] p-5 shadow-[0_18px_40px_-22px_rgba(0,0,0,0.8)] transition-colors"
+      >
+        <div aria-hidden className="pointer-events-none absolute inset-0">
+          <div className="absolute left-1/2 top-0 h-full w-px -translate-x-1/2 bg-white/5" />
+          <div className="absolute left-1/2 top-[55%] h-44 w-44 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/5" />
+        </div>
+
+        <div className="relative mb-4 flex items-center gap-2">
+          <span className="h-2 w-2 rounded-full bg-[var(--copa-red)] animate-pulse motion-reduce:animate-none" />
+          <span className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--copa-red)]">
+            {jogos.length} jogos ao vivo
+          </span>
+        </div>
+
+        <div className="relative flex flex-col gap-3">
+          {jogos.map(row => {
+            const casa = um(row.selecao_casa)
+            const fora = um(row.selecao_fora)
+            if (!casa || !fora) return null
+            return (
+              <div key={row.id} className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 min-w-0">
+                  <Bandeira codigo={casa.codigo} emoji={casa.bandeira} nome={casa.nome} tamanho="sm" />
+                  <span className="font-display text-sm font-semibold uppercase text-[var(--chalk)] truncate">{casa.nome}</span>
+                </div>
+                <span className="font-display text-lg font-bold tnum text-[var(--chalk)] shrink-0">
+                  {row.gols_casa ?? 0} – {row.gols_fora ?? 0}
+                </span>
+                <div className="flex items-center gap-2 justify-end min-w-0">
+                  <span className="font-display text-sm font-semibold uppercase text-[var(--chalk)] truncate">{fora.nome}</span>
+                  <Bandeira codigo={fora.codigo} emoji={fora.bandeira} nome={fora.nome} tamanho="sm" />
+                </div>
+              </div>
+            )
+          })}
+        </div>
+
+        <div className="relative mt-4 flex items-center justify-center gap-1.5 text-sm font-semibold text-[var(--mist)] transition-colors group-hover:text-[var(--chalk)]">
+          Acompanhar lance a lance
+          <span className="transition-transform group-hover:translate-x-1">→</span>
+        </div>
+      </Link>
+    )
+  }
+
+  // Jogo único (ao vivo ou próximo)
+  const row = vivos[0] as unknown as Row
   const casa = um(row.selecao_casa)
   const fora = um(row.selecao_fora)
   if (!casa || !fora) return null
@@ -65,13 +116,11 @@ export default async function HeroProximoJogo() {
         aoVivo ? 'border-[var(--copa-red)]/60' : 'border-[var(--line)]'
       }`}
     >
-      {/* Motivo de campo: linha central + círculo */}
       <div aria-hidden className="pointer-events-none absolute inset-0">
         <div className="absolute left-1/2 top-0 h-full w-px -translate-x-1/2 bg-white/5" />
         <div className="absolute left-1/2 top-[55%] h-44 w-44 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/5" />
       </div>
 
-      {/* Topo */}
       <div className="relative mb-5 flex items-center justify-between">
         {aoVivo ? (
           <span className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.14em] text-[var(--copa-red)]">
@@ -86,7 +135,6 @@ export default async function HeroProximoJogo() {
         <span className="text-[11px] text-[var(--mist)]">{row.fase}</span>
       </div>
 
-      {/* Placar */}
       <div className="relative grid grid-cols-[1fr_auto_1fr] items-center gap-3">
         <div className="flex flex-col items-center gap-2">
           <Bandeira codigo={casa.codigo} emoji={casa.bandeira} nome={casa.nome} tamanho="xl" />
@@ -114,7 +162,6 @@ export default async function HeroProximoJogo() {
         </div>
       </div>
 
-      {/* CTA */}
       <div className="relative mt-5 flex items-center justify-center gap-1.5 text-sm font-semibold text-[var(--mist)] transition-colors group-hover:text-[var(--chalk)]">
         {aoVivo ? 'Acompanhar lance a lance' : 'Ver todas as partidas'}
         <span className="transition-transform group-hover:translate-x-1">→</span>
