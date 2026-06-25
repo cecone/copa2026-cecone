@@ -27,6 +27,7 @@ export default function FormPalpite({ partida, grupoId, palpiteAtual, palpitesGr
   const [salvando, setSalvando] = useState(false)
   const [salvo, setSalvo] = useState(false)
   const [erro, setErro] = useState('')
+  const [verGrupo, setVerGrupo] = useState(false)
 
   const aoVivo = partida.status === 'ao_vivo'
   const bloqueado = partida.status === 'encerrada' || aoVivo
@@ -142,36 +143,49 @@ export default function FormPalpite({ partida, grupoId, palpiteAtual, palpitesGr
             </button>
           </div>
           {erro && <p className="mt-2 text-xs text-[var(--copa-red)]">{erro}</p>}
-          <p className="mt-3 text-center text-xs text-[var(--mist)]">
-            🔒 Os palpites do grupo aparecem no apito inicial
-          </p>
         </>
       )}
 
-      {/* Palpites do grupo — só aparece depois que o jogo começa */}
+      {/* Palpites do grupo — recolhido por padrão, abre com um toque */}
       {palpitesGrupo && palpitesGrupo.length > 0 && (
         <div className="mt-3 border-t border-[var(--line)] pt-3">
-          <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-[var(--mist)]">
-            Palpites do grupo · {palpitesGrupo.length}
-          </p>
-          <div className="flex flex-col">
-            {palpitesGrupo.map((pg, i) => (
-              <div
-                key={i}
-                className={`flex items-center justify-between rounded-lg px-2 py-1.5 ${pg.euMesmo ? 'bg-[var(--copa-blue)]/10' : ''}`}
-              >
-                <span className={`truncate text-sm ${pg.euMesmo ? 'font-semibold text-[var(--chalk)]' : 'text-[var(--mist)]'}`}>
-                  {pg.euMesmo ? 'Você' : pg.nome}
-                </span>
-                <span className="flex shrink-0 items-center gap-2">
-                  <span className="tnum font-display text-sm font-bold text-[var(--chalk)]">
-                    {pg.gols_casa} – {pg.gols_fora}
+          <button
+            type="button"
+            onClick={() => setVerGrupo(v => !v)}
+            aria-expanded={verGrupo}
+            className="flex w-full items-center justify-between text-left"
+          >
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--mist)]">
+              Palpites do grupo · {palpitesGrupo.length}
+            </span>
+            <svg
+              className={`h-3.5 w-3.5 text-[var(--mist)] transition-transform ${verGrupo ? 'rotate-180' : ''}`}
+              viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+            >
+              <path d="M6 9l6 6 6-6" />
+            </svg>
+          </button>
+
+          {verGrupo && (
+            <div className="mt-2 flex flex-col">
+              {palpitesGrupo.map((pg, i) => (
+                <div
+                  key={i}
+                  className={`flex items-center justify-between rounded-lg px-2 py-1.5 ${pg.euMesmo ? 'bg-[var(--copa-blue)]/10' : ''}`}
+                >
+                  <span className={`truncate text-sm ${pg.euMesmo ? 'font-semibold text-[var(--chalk)]' : 'text-[var(--mist)]'}`}>
+                    {pg.euMesmo ? 'Você' : pg.nome}
                   </span>
-                  {pg.pontos !== null && <PontosChip pontos={pg.pontos} />}
-                </span>
-              </div>
-            ))}
-          </div>
+                  <span className="flex shrink-0 items-center gap-2">
+                    <span className="tnum font-display text-sm font-bold text-[var(--chalk)]">
+                      {pg.gols_casa} – {pg.gols_fora}
+                    </span>
+                    {pg.pontos !== null && <PontosChip pontos={pg.pontos} />}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>
