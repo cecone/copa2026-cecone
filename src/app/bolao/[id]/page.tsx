@@ -14,7 +14,7 @@ type Props = {
 
 type SelecaoRow = { id: number; nome: string; codigo: string; bandeira: string }
 type PartidaRow = {
-  id: number; fase: string; data_hora: string;
+  id: number; fase: string; fase_tipo: string; data_hora: string;
   gols_casa: number | null; gols_fora: number | null;
   status: string; minuto: number | null;
   selecao_casa: SelecaoRow | SelecaoRow[] | null
@@ -28,7 +28,8 @@ function rowToPartida(row: PartidaRow): Partida {
   return {
     id: row.id,
     fase: row.fase,
-    data: dt.toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' }), // YYYY-MM-DD no fuso BR
+    fase_tipo: row.fase_tipo,
+    data: dt.toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' }),
     hora: dt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' }),
     selecao_casa: selCasa
       ? { id: selCasa.id, nome: selCasa.nome, codigo: selCasa.codigo, bandeira: selCasa.bandeira }
@@ -50,7 +51,22 @@ function rodadaGrupo(data: string): number {
   return 3                           // Rodada 3: 24–27/jun
 }
 
-// Pontos do usuário em UM palpite (mesma regra do ranking: 7 cravou / 3 resultado / 0)
+// Rótulos e ordem das fases do mata-mata
+const LABEL_KO: Record<string, string> = {
+  rodada32: 'Rodada de 32',
+  oitavas: 'Oitavas',
+  quartas: 'Quartas',
+  semi: 'Semifinais',
+  terceiro: 'Disputa de 3º',
+  final: 'Final',
+}
+const ORDEM_KO = ['rodada32', 'oitavas', 'quartas', 'semi', 'terceiro', 'final']
+
+// Times definidos? (sentinela id 0 = "A definir")
+function temTimes(p: Partida): boolean {
+  return p.selecao_casa.id !== 0 && p.selecao_fora.id !== 0
+}
+
 function pontosPalpite(p: Partida, palpite?: { gols_casa: number; gols_fora: number } | null): number {
   if (p.status !== 'encerrada' || !palpite) return 0
   if (p.gols_casa === null || p.gols_fora === null) return 0
@@ -90,17 +106,21 @@ export default async function GrupoBolaoPage({ params }: Props) {
     .select('user_id')
     .eq('grupo_id', id)
 
+  // TODAS as partidas (grupos + mata-mata)
   const { data: partidasData } = await admin
     .from('partidas')
     .select(`
-      id, fase, data_hora, gols_casa, gols_fora, status, minuto,
+      id, fase, fase_tipo, data_hora, gols_casa, gols_fora, status, minuto,
       selecao_casa:selecao_casa_id(id, nome, codigo, bandeira),
       selecao_fora:selecao_fora_id(id, nome, codigo, bandeira)
     `)
-    .eq('fase_tipo', 'grupos')
     .order('data_hora', { ascending: true })
 
-  const partidas = (partidasData ?? []).map(r => rowToPartida(r as unknown as PartidaRow))
+  const itens = (partidasData ?? []).map(r => {
+    const row = r as unknown as PartidaRow
+    return { faseTipo: row.fase_tipo, partida: rowToPartida(row) }
+  })
+  const partidas = itens.map(x => x.partida)
 
   const { data: meusPalpites } = await admin
     .from('palpites')
@@ -131,33 +151,6 @@ export default async function GrupoBolaoPage({ params }: Props) {
     })
   )
 
-  // Palpites do grupo por partida — apenas para jogos já iniciados (privacidade real)
-  const partidaPorId = new Map(partidas.map(p => [p.id, p]))
-  const palpitesGrupoPorPartida = new Map<number, {
-    nome: string; gols_casa: number; gols_fora: number; pontos: number | null; euMesmo: boolean
-  }[]>()
-  for (const palp of todosPalpites ?? []) {
-    const partida = partidaPorId.get(palp.partida_id)
-    if (!partida || partida.status === 'agendada') continue
-    const lista = palpitesGrupoPorPartida.get(palp.partida_id) ?? []
-    lista.push({
-      nome: nomesPorId.get(palp.user_id) ?? 'Participante',
-      gols_casa: palp.gols_casa,
-      gols_fora: palp.gols_fora,
-      pontos: partida.status === 'encerrada' ? pontosPalpite(partida, palp) : null,
-      euMesmo: palp.user_id === user.id,
-    })
-    palpitesGrupoPorPartida.set(palp.partida_id, lista)
-  }
-  // Ordenação: euMesmo primeiro, depois pontos desc, depois nome asc
-  for (const lista of palpitesGrupoPorPartida.values()) {
-    lista.sort((a, b) => {
-      if (a.euMesmo !== b.euMesmo) return a.euMesmo ? -1 : 1
-      if ((b.pontos ?? 0) !== (a.pontos ?? 0)) return (b.pontos ?? 0) - (a.pontos ?? 0)
-      return a.nome.localeCompare(b.nome)
-    })
-  }
-
   const { data: selecoesRaw } = await admin
     .from('selecoes')
     .select('id, nome, codigo, bandeira')
@@ -175,14 +168,52 @@ export default async function GrupoBolaoPage({ params }: Props) {
     .eq('user_id', user.id)
     .single()
 
-  // Agrupa as partidas por rodada (1, 2, 3) calculada pela data
-  const porRodada = new Map<number, Partida[]>()
-  for (const p of partidas) {
-    const r = rodadaGrupo(p.data)
-    if (!porRodada.has(r)) porRodada.set(r, [])
-    porRodada.get(r)!.push(p)
+  // Palpites do grupo por partida — só jogos que já começaram (privacidade no servidor)
+  const partidaPorId = new Map(partidas.map(p => [p.id, p]))
+  const palpitesGrupoPorPartida = new Map<number, {
+    nome: string; gols_casa: number; gols_fora: number; pontos: number | null; euMesmo: boolean
+  }[]>()
+
+  for (const palp of todosPalpites ?? []) {
+    const partida = partidaPorId.get(palp.partida_id)
+    if (!partida || partida.status === 'agendada') continue
+    const lista = palpitesGrupoPorPartida.get(palp.partida_id) ?? []
+    lista.push({
+      nome: nomesPorId.get(palp.user_id) ?? 'Participante',
+      gols_casa: palp.gols_casa,
+      gols_fora: palp.gols_fora,
+      pontos: partida.status === 'encerrada' ? pontosPalpite(partida, palp) : null,
+      euMesmo: palp.user_id === user.id,
+    })
+    palpitesGrupoPorPartida.set(palp.partida_id, lista)
   }
-  const rodadas = Array.from(porRodada.keys()).sort((a, b) => a - b)
+  for (const lista of palpitesGrupoPorPartida.values()) {
+    lista.sort((a, b) => {
+      if (a.euMesmo !== b.euMesmo) return a.euMesmo ? -1 : 1
+      if ((b.pontos ?? 0) !== (a.pontos ?? 0)) return (b.pontos ?? 0) - (a.pontos ?? 0)
+      return a.nome.localeCompare(b.nome)
+    })
+  }
+
+  // ── Seções: grupos (Rodada 1/2/3) → mata-mata por fase ──
+  const secoes: { chave: string; titulo: string; jogos: Partida[] }[] = []
+
+  const porRodada = new Map<number, Partida[]>()
+  for (const x of itens) {
+    if (x.faseTipo !== 'grupos') continue
+    const r = rodadaGrupo(x.partida.data)
+    const arr = porRodada.get(r) ?? []
+    arr.push(x.partida)
+    porRodada.set(r, arr)
+  }
+  for (const r of Array.from(porRodada.keys()).sort((a, b) => a - b)) {
+    secoes.push({ chave: `g${r}`, titulo: `Rodada ${r}`, jogos: porRodada.get(r)! })
+  }
+
+  for (const ft of ORDEM_KO) {
+    const jogos = itens.filter(x => x.faseTipo === ft).map(x => x.partida)
+    if (jogos.length) secoes.push({ chave: ft, titulo: LABEL_KO[ft], jogos })
+  }
 
   return (
     <div className="min-h-screen px-4 pb-16 pt-6 sm:px-8">
@@ -256,27 +287,27 @@ export default async function GrupoBolaoPage({ params }: Props) {
           palpiteAtual={palpiteEspecial ?? null}
         />
 
-        {/* Palpites agrupados por rodada */}
+        {/* Palpites por fase (grupos + mata-mata) */}
         <h2 className="mb-4 font-display text-xl font-bold uppercase text-[var(--chalk)]">Seus palpites</h2>
         {partidas.length === 0 ? (
           <p className="text-sm text-[var(--mist)]">Os jogos ainda não foram carregados.</p>
         ) : (
           <div className="flex flex-col gap-3">
-            {rodadas.map(r => {
-              const jogos = porRodada.get(r)!
-              const abertos = jogos.filter(j => j.status === 'agendada').length
-              const todasEncerradas = jogos.every(j => j.status === 'encerrada')
-              const pontosRodada = jogos.reduce((acc, j) => acc + pontosPalpite(j, palpitePorPartida[j.id]), 0)
+            {secoes.map(sec => {
+              const jogos = sec.jogos
+              const abertos = jogos.filter(j => j.status === 'agendada' && temTimes(j)).length
+              const temAcao = jogos.some(j => (j.status === 'agendada' && temTimes(j)) || j.status === 'ao_vivo')
+              const pontosSecao = jogos.reduce((acc, j) => acc + pontosPalpite(j, palpitePorPartida[j.id]), 0)
               const sub = abertos > 0
                 ? `${jogos.length} jogos · ${abertos} a palpitar`
                 : `${jogos.length} jogos`
               return (
                 <Rodada
-                  key={r}
-                  titulo={`Rodada ${r}`}
+                  key={sec.chave}
+                  titulo={sec.titulo}
                   subtitulo={sub}
-                  pontos={pontosRodada}
-                  defaultAberta={!todasEncerradas}
+                  pontos={pontosSecao}
+                  defaultAberta={temAcao}
                 >
                   {jogos.map(partida => (
                     <FormPalpite
@@ -284,7 +315,7 @@ export default async function GrupoBolaoPage({ params }: Props) {
                       partida={partida}
                       grupoId={id}
                       palpiteAtual={palpitePorPartida[partida.id] ?? null}
-                      palpitesGrupo={palpitesGrupoPorPartida.get(partida.id) ?? []}
+                      palpitesGrupo={palpitesGrupoPorPartida.get(partida.id)}
                     />
                   ))}
                 </Rodada>

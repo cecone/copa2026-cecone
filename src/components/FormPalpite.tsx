@@ -31,6 +31,7 @@ export default function FormPalpite({ partida, grupoId, palpiteAtual, palpitesGr
 
   const aoVivo = partida.status === 'ao_vivo'
   const bloqueado = partida.status === 'encerrada' || aoVivo
+  const aDefinir = partida.selecao_casa.id === 0 || partida.selecao_fora.id === 0
 
   function calcularPontos(): number | null {
     if (partida.status !== 'encerrada') return null
@@ -127,6 +128,11 @@ export default function FormPalpite({ partida, grupoId, palpiteAtual, palpitesGr
             )}
           </div>
         )
+      ) : aDefinir ? (
+        /* TIMES INDEFINIDOS (mata-mata aguardando confronto) */
+        <p className="text-center text-xs text-[var(--mist)]/70">
+          Times ainda não definidos — o palpite abre quando o confronto fechar.
+        </p>
       ) : (
         /* ABERTA PARA PALPITE */
         <>

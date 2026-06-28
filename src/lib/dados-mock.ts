@@ -105,20 +105,20 @@ export const chaveamentoMock: PartidaEliminatoria[] = [
 
 export const partidasMock: Partida[] = [
   // Rodada 1 — encerradas
-  { id: 1, fase: 'Grupo A', data: '2026-06-11', hora: '13:00', selecao_casa: BRA, selecao_fora: SRB, gols_casa: 2, gols_fora: 0, status: 'encerrada' },
-  { id: 2, fase: 'Grupo A', data: '2026-06-11', hora: '16:00', selecao_casa: MEX, selecao_fora: CMR, gols_casa: 1, gols_fora: 1, status: 'encerrada' },
-  { id: 3, fase: 'Grupo B', data: '2026-06-12', hora: '13:00', selecao_casa: ARG, selecao_fora: KSA, gols_casa: 2, gols_fora: 1, status: 'encerrada' },
-  { id: 4, fase: 'Grupo B', data: '2026-06-12', hora: '16:00', selecao_casa: POL, selecao_fora: AUS, gols_casa: 2, gols_fora: 0, status: 'encerrada' },
-  { id: 5, fase: 'Grupo D', data: '2026-06-13', hora: '13:00', selecao_casa: ENG, selecao_fora: USA, gols_casa: 0, gols_fora: 0, status: 'encerrada' },
+  { id: 1, fase: 'Grupo A', fase_tipo: 'grupos', data: '2026-06-11', hora: '13:00', selecao_casa: BRA, selecao_fora: SRB, gols_casa: 2, gols_fora: 0, status: 'encerrada' },
+  { id: 2, fase: 'Grupo A', fase_tipo: 'grupos', data: '2026-06-11', hora: '16:00', selecao_casa: MEX, selecao_fora: CMR, gols_casa: 1, gols_fora: 1, status: 'encerrada' },
+  { id: 3, fase: 'Grupo B', fase_tipo: 'grupos', data: '2026-06-12', hora: '13:00', selecao_casa: ARG, selecao_fora: KSA, gols_casa: 2, gols_fora: 1, status: 'encerrada' },
+  { id: 4, fase: 'Grupo B', fase_tipo: 'grupos', data: '2026-06-12', hora: '16:00', selecao_casa: POL, selecao_fora: AUS, gols_casa: 2, gols_fora: 0, status: 'encerrada' },
+  { id: 5, fase: 'Grupo D', fase_tipo: 'grupos', data: '2026-06-13', hora: '13:00', selecao_casa: ENG, selecao_fora: USA, gols_casa: 0, gols_fora: 0, status: 'encerrada' },
 
   // Rodada 2 — uma ao vivo
-  { id: 6, fase: 'Grupo A', data: '2026-06-15', hora: '13:00', selecao_casa: BRA, selecao_fora: MEX, gols_casa: 3, gols_fora: 1, status: 'encerrada' },
-  { id: 7, fase: 'Grupo B', data: '2026-06-15', hora: '16:00', selecao_casa: ARG, selecao_fora: POL, gols_casa: 2, gols_fora: 0, status: 'encerrada' },
-  { id: 8, fase: 'Grupo C', data: '2026-06-16', hora: '19:00', selecao_casa: FRA, selecao_fora: DEN, gols_casa: 1, gols_fora: 0, status: 'ao_vivo', minuto: 67 },
+  { id: 6, fase: 'Grupo A', fase_tipo: 'grupos', data: '2026-06-15', hora: '13:00', selecao_casa: BRA, selecao_fora: MEX, gols_casa: 3, gols_fora: 1, status: 'encerrada' },
+  { id: 7, fase: 'Grupo B', fase_tipo: 'grupos', data: '2026-06-15', hora: '16:00', selecao_casa: ARG, selecao_fora: POL, gols_casa: 2, gols_fora: 0, status: 'encerrada' },
+  { id: 8, fase: 'Grupo C', fase_tipo: 'grupos', data: '2026-06-16', hora: '19:00', selecao_casa: FRA, selecao_fora: DEN, gols_casa: 1, gols_fora: 0, status: 'ao_vivo', minuto: 67 },
 
   // Rodada 3 — agendadas
-  { id: 9,  fase: 'Grupo A', data: '2026-06-19', hora: '16:00', selecao_casa: BRA, selecao_fora: CMR, gols_casa: null, gols_fora: null, status: 'agendada' },
-  { id: 10, fase: 'Grupo A', data: '2026-06-19', hora: '16:00', selecao_casa: MEX, selecao_fora: SRB, gols_casa: null, gols_fora: null, status: 'agendada' },
-  { id: 11, fase: 'Grupo B', data: '2026-06-20', hora: '16:00', selecao_casa: ARG, selecao_fora: AUS, gols_casa: null, gols_fora: null, status: 'agendada' },
-  { id: 12, fase: 'Grupo D', data: '2026-06-21', hora: '19:00', selecao_casa: ENG, selecao_fora: USA, gols_casa: null, gols_fora: null, status: 'agendada' },
+  { id: 9,  fase: 'Grupo A', fase_tipo: 'grupos', data: '2026-06-19', hora: '16:00', selecao_casa: BRA, selecao_fora: CMR, gols_casa: null, gols_fora: null, status: 'agendada' },
+  { id: 10, fase: 'Grupo A', fase_tipo: 'grupos', data: '2026-06-19', hora: '16:00', selecao_casa: MEX, selecao_fora: SRB, gols_casa: null, gols_fora: null, status: 'agendada' },
+  { id: 11, fase: 'Grupo B', fase_tipo: 'grupos', data: '2026-06-20', hora: '16:00', selecao_casa: ARG, selecao_fora: AUS, gols_casa: null, gols_fora: null, status: 'agendada' },
+  { id: 12, fase: 'Grupo D', fase_tipo: 'grupos', data: '2026-06-21', hora: '19:00', selecao_casa: ENG, selecao_fora: USA, gols_casa: null, gols_fora: null, status: 'agendada' },
 ]

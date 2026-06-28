@@ -28,7 +28,8 @@ export type StatusPartida = 'encerrada' | 'ao_vivo' | 'agendada'
 
 export type Partida = {
   id: number
-  fase: string // 'Grupo A', 'Grupo B', 'Oitavas', etc.
+  fase: string // 'Grupo A', 'Rodada de 32', 'Oitavas de Final', etc.
+  fase_tipo: string // 'grupos' | 'rodada32' | 'oitavas' | 'quartas' | 'semi' | 'terceiro' | 'final'
   data: string // ISO date string
   hora: string // '18:00'
   selecao_casa: Selecao

@@ -58,6 +58,7 @@ function rowToPartida(row: SupabasePartida): Partida {
   return {
     id: row.id,
     fase: row.fase,
+    fase_tipo: row.fase_tipo,
     data: dt.toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' }),
     hora: dt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' }),
     selecao_casa: selCasa
